@@ -9,7 +9,7 @@ The OpenLog Artemis is an open source datalogger that comes preprogrammed to aut
 
 The firmware in this repo is dedicated to logging seismic data from the SM-24 Geophone using the ADS122C04 ADC on the Qwiic PT100. [You can find the main OpenLog Artemis repo here](https://github.com/sparkfun/OpenLog_Artemis).
 
-Fast Fourier Transform-ed frequency and amplitude data is logged to SD card in CSV format. The CSV files can be analyzed with your favorite spreadsheet software or analysis tool.
+Fast Fourier Transformed frequency and amplitude data is logged to SD card in CSV format. The CSV files can be analyzed with your favorite spreadsheet software or analysis tool.
 You can also use the Arduino IDE Serial Plotter to visualize the live FFT data.
 
 OpenLog Artemis is highly configurable over an easy to use serial interface. Simply plug in a USB C cable and open a terminal at 115200kbps. The logging output is automatically streamed to both the terminal and the microSD. Pressing any key will open the configuration menu.
