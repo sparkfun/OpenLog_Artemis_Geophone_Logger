@@ -68,12 +68,12 @@ if you are doing this for the first time.
 
 We need to solder two lengths of stranded hook-up wire to the geophone pins. This is best done at the same time as when you solder on the damping resistor.
 
-Keep the wires short. 1500mm / 6" should be more than enough. After soldering the wires to the geophone pins, twist the wires together (to help minimise noise)
+Keep the wires short. 150mm / 6" should be more than enough. After soldering the wires to the geophone pins, twist the wires together (to help minimise noise)
 and then strip the ends so they can be inserted into the latch terminals on the Qwiic PT100.
 
 ## Connect the geophone to the Qwiic PT100
 
-The Qwiic PT100 is designed to measure temperature using a 100Ω Platinum Resistance Thermometer. However, the heart of the Qwiic PT100 is the ADS122C04
+The Qwiic PT100 is designed to measure temperature very accurately using a 100Ω Platinum Resistance Thermometer. However, the heart of the Qwiic PT100 is the ADS122C04
 24-bit analog-to-digital converter (ADC) which is perfect for digitizing the signal from the geophone. It has a differential input as well as adjustable gain (x1 to x128), which we can use to
 amplify the small signals from the geophone.
 
@@ -89,7 +89,7 @@ Connect the Qwiic PT100 to the OLA using a Qwiic cable.
 
 Now insert your microSD card into the socket on the back of the OLA. The card clicks into place.
 
-You can use any size card, formatted with Fat16, Fat32 or exFat. But if you are going to be logging a lot of data then a larger card is recommended.
+You can use any size card formatted with Fat16, Fat32 or exFat. But if you are going to be logging a lot of data then a larger card is recommended.
 
 ## Install the OLA geophone logger firmware
 
@@ -101,7 +101,7 @@ You are now ready to start logging data. If you are familiar with the Arduino ID
 
 Alternatively, you can use a terminal emulator like Tera Term to see the data. Just make sure it is set to 115,200 Baud.
 
-If you hit any key (send any serial character) the main menu will open allowing you to change the OLA's settings.
+If you hit any key (send any character) the main menu will open allowing you to change the OLA's settings.
 
 ## What's under the hood?
 
@@ -123,7 +123,7 @@ If you enable Serial Plotter mode using menu option 1 followed by menu option 6,
 the right is 250.5Hz. The vertical bars correspond to intervals of 50Hz. (We're fortunate that the Serial Plotter can plot 500 values at a time!) If you look at the data in the files
 created on the microSD card, you'll see that there are 501 columns of data. The 501st column contains the peak frequency signal in Hz.
 
-The OLA geophone logger firmware use two sample buffers so we can sample continuously. Fresh samples are recorded into one buffer while the other buffer is being analyzed using the FFT.
+The OLA geophone logger firmware uses two sample buffers so we can sample continuously. Fresh samples are recorded into one buffer while the other buffer is being analyzed using the FFT.
 
 With no seismic activity, you will see a noisy low level signal. Tap your workbench and you'll see a large response. You can set the amplitude threshold to avoid logging all of that noise.
 
