@@ -12,6 +12,8 @@ The firmware in this repo is dedicated to logging seismic data from the SM-24 Ge
 Fast Fourier Transformed frequency and amplitude data is logged to SD card in CSV format. The CSV files can be analyzed with your favorite spreadsheet software or analysis tool.
 You can also use the Arduino IDE Serial Plotter to visualize the live FFT data.
 
+![SerialPlotter.gif](img/SerialPlotter.gif)
+
 OpenLog Artemis is highly configurable over an easy to use serial interface. Simply plug in a USB C cable and open a terminal at 115200kbps. The logging output is automatically streamed to both the terminal and the microSD. Pressing any key will open the configuration menu.
 
 The OpenLog Artemis automatically scans for, detects, configures, and logs data from the ADS122C04.
