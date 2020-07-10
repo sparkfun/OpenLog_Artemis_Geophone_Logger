@@ -123,6 +123,8 @@ If you enable Serial Plotter mode using menu option 1 followed by menu option 6,
 the right is 250.5Hz. The vertical bars correspond to intervals of 50Hz. (We're fortunate that the Serial Plotter can plot 500 values at a time!) If you look at the data in the files
 created on the microSD card, you'll see that there are 501 columns of data. The 501st column contains the peak frequency signal in Hz.
 
+![SerialPlotter.gif](img/SerialPlotter.gif)
+
 The OLA geophone logger firmware uses two sample buffers so we can sample continuously. Fresh samples are recorded into one buffer while the other buffer is being analyzed using the FFT.
 
 With no seismic activity, you will see a noisy low level signal. Tap your workbench and you'll see a large response. You can set the amplitude threshold to avoid logging all of that noise.
