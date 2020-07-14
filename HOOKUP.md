@@ -87,9 +87,10 @@ Connect the Qwiic PT100 to the OLA using a Qwiic cable.
 
 ## Add the microSD card
 
-Now insert your microSD card into the socket on the back of the OLA. The card clicks into place.
+Your microSD card needs to be formatted as FAT32, which limits its size to 32GB. That's still a lot of data (around 5 months of continuous logging)!
+You can use a card larger than 32GB but formatting it as FAT32 will limit its effective size to 32GB. We hope to be able to support larger exFAT cards in the future.
 
-You can use any size card formatted with Fat16, Fat32 or exFat. But if you are going to be logging a lot of data then a larger card is recommended.
+Now insert your microSD card into the socket on the back of the OLA. The card clicks into place.
 
 ## Install the OLA geophone logger firmware
 
@@ -108,10 +109,10 @@ If you hit any key (send any character) the main menu will open allowing you to 
 The Artemis is doing all of the hard work for you: sampling the geophone signal, converting the samples to frequency data using a Fast Fourier Transform, and logging each reading
 to microSD card.
 
-You can adjust the gain of the ADS122C04 ADC using menu option 5. The gain can be set from x1 to x128. You can also set the amplitude threshold that the peak signal needs to exceed before it
+You can adjust the gain of the ADS122C04 ADC using menu option 4. The gain can be set from x1 to x128. You can also set the amplitude threshold that the peak signal needs to exceed before it
 is logged to SD card. This allows you to avoid logging all of the background noise between seismic waves.
 
-The SM-24 geophone has a useful frequency range of 240Hz, so we need to be logging at 480Hz to be able to capture data across the full frequency range.
+The SM-24 geophone has a useful frequency range of 240Hz, so we need to be logging at 480Hz or more to be able to capture data across the full frequency range.
 Have a look at [Nyquist-Shannon sampling](https://en.wikipedia.org/wiki/Nyquist%E2%80%93Shannon_sampling_theorem) to find out why. We round the 480Hz up to 500Hz to make life easier for ourselves.
 We actually set the ADS122C04 sample rate to 600Hz to make sure we have a new conversion ready every 2 milliseconds.
 
@@ -119,9 +120,12 @@ The [Fast Fourier Transform](https://en.wikipedia.org/wiki/Fast_Fourier_transfor
 We actually take 1024 samples at 500Hz before we start the FFT conversion and so we get new frequency data every two seconds. The OLA logs "frequency bins" 1 to 501 which corresponds to
 0.5Hz to 250.5Hz in 0.5Hz increments.
 
-If you enable Serial Plotter mode using menu option 1 followed by menu option 6, you can use the Arduino IDE Serial Plotter tool to plot the data for you. The left of the window is 0.5Hz,
-the right is 250.5Hz. The vertical bars correspond to intervals of 50Hz. (We're fortunate that the Serial Plotter can plot 500 values at a time!) If you look at the data in the files
-created on the microSD card, you'll see that there are 501 columns of data. The 501st column contains the peak frequency signal in Hz.
+If you enable Serial Plotter mode using menu option 1 followed by menu option 3, you can use the Arduino IDE Serial Plotter tool to plot the data for you. The left of the window is 0.5Hz,
+the right is 250.5Hz. The vertical bars correspond to intervals of 50Hz. (We're fortunate that the Serial Plotter can plot 500 values at a time!) You will see fresh data scroll in every two
+seconds; the scrolling speed is baud rate dependent (it takes approximately half a second for the fresh data to scroll across at 115200 baud). The Y-axis scales automatically depending on the peak amplitude.
+It is normal to see low amplitude 'noise' displayed when there is no seismic activity.
+
+If you look at the data in the files created on the microSD card, you'll see that there are 501 columns of data after the date and time. The 501st column contains the peak frequency signal in Hz.
 
 ![SerialPlotter.gif](img/SerialPlotter.gif)
 

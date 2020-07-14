@@ -7,7 +7,8 @@ SparkFun OpenLog Artemis : Geophone Logger
 
 The OpenLog Artemis is an open source datalogger that comes preprogrammed to automatically log IMU, GPS, serial data, and various pressure, humidity, and distance sensors. All without writing a single line of code! OLA automatically detects, configures, and logs Qwiic sensors. OLA is designed for users who just need to capture a bunch of data to SD and get back to their larger project.
 
-The firmware in this repo is dedicated to logging seismic data from the SM-24 Geophone using the ADS122C04 ADC on the Qwiic PT100. [You can find the main OpenLog Artemis repo here](https://github.com/sparkfun/OpenLog_Artemis).
+The firmware in this repo is dedicated to logging seismic data from the [SM-24 Geophone](https://www.sparkfun.com/products/11744)
+using the ADS122C04 ADC on the [Qwiic PT100](https://www.sparkfun.com/products/16770). [You can find the main OpenLog Artemis repo here](https://github.com/sparkfun/OpenLog_Artemis).
 
 Fast Fourier Transformed frequency and amplitude data is logged to SD card in CSV format. The CSV files can be analyzed with your favorite spreadsheet software or analysis tool.
 You can also use the Arduino IDE Serial Plotter to visualize the live FFT data.
@@ -20,7 +21,7 @@ The OpenLog Artemis automatically scans for, detects, configures, and logs data 
 
 The menus will let you configure the:
 
-* ADS122C04 Gain (1 to 128)
+* ADS122C04 Gain (x1 to x128)
 * Amplitude Threshold - so you only log seismic events that exceed the set threshold
 * Artemis Real Time Clock - each seismic event is date and timestamped. The RTC can be synchronized accurately to GNSS time too.
 
