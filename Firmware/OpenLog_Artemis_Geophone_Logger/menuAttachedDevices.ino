@@ -34,7 +34,7 @@ bool detectQwiicDevices()
 
   qwiic.setClock(100000); //During detection, go slow
 
-  qwiic.setPullups(1); //Set pullups to 1k. If we don't have pullups, detectQwiicDevices() takes ~900ms to complete. We'll disable pullups if something is detected.
+  qwiic.setPullups(QWIIC_PULLUPS); //Set pullups. (Redundant. beginQwiic has done this too.) If we don't have pullups, detectQwiicDevices() takes ~900ms to complete. We'll disable pullups if something is detected.
 
   //24k causes a bunch of unknown devices to be falsely detected.
   //qwiic.setPullups(24); //Set pullups to 24k. If we don't have pullups, detectQwiicDevices() takes ~900ms to complete. We'll disable pullups if something is detected.
@@ -92,7 +92,8 @@ bool detectQwiicDevices()
       {
         if (addDevice(foundType, address, 0, 0) == true) //Records this device. //Returns false if device was already recorded.
         {
-          //Serial.printf("-Added %s at address 0x%02X\n", getDeviceName(foundType), address);
+          if (settings.printDebugMessages == true)
+            Serial.printf("Added %s at address 0x%02X\n", getDeviceName(foundType), address);
         }
       }
     }
@@ -138,7 +139,8 @@ bool detectQwiicDevices()
 
   bubbleSortDevices(head); //This may destroy mux alignment to node 0.
 
-  qwiic.setPullups(0); //We've detected something on the bus so disable pullups
+  //*** PaulZC commented this. Let's leave pull-ups set to 1k and only disable them when taking to a u-blox device ***
+  //qwiic.setPullups(0); //We've detected something on the bus so disable pullups.
 
   setMaxI2CSpeed(); //Try for 400kHz but reduce to 100kHz or low if certain devices are attached
 
@@ -324,6 +326,8 @@ void getUbloxDateTime(int &year, int &month, int &day, int &hour, int &minute, i
     {
       case DEVICE_GPS_UBLOX:
       {
+        qwiic.setPullups(0); //Disable pullups to minimize CRC issues
+
         SFE_UBLOX_GPS *nodeDevice = (SFE_UBLOX_GPS *)temp->classPtr;
         struct_uBlox *nodeSetting = (struct_uBlox *)temp->configPtr;
 
@@ -338,6 +342,8 @@ void getUbloxDateTime(int &year, int &month, int &day, int &hour, int &minute, i
         dateValid = nodeDevice->getDateValid();
         timeValid = nodeDevice->getTimeValid();
         millisecond = nodeDevice->getMillisecond();
+
+        qwiic.setPullups(QWIIC_PULLUPS); //Re-enable pullups
       }
     }
     temp = temp->next;

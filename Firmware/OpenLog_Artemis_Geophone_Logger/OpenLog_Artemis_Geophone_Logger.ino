@@ -1,7 +1,7 @@
 /*
   OpenLog Artemis Geophone Logger
   By: Paul Clark (PaulZC)
-  Date: July 14th, 2020
+  Date: July 17th, 2020
   Version: V1.0
 
   This firmware runs on the OpenLog Artemis and is dedicated to logging data from the SM-24 geophone:
@@ -48,10 +48,17 @@ const int FIRMWARE_VERSION_MINOR = 0;
 //Depends on hardware version. This can be found as a marking on the PCB.
 //x04 was the SparkX 'black' version.
 //v10 was the first red version.
+//05 and 06 are test versions based on x04 hardware. For x06, qwiic power is provide by a second AP2112K.
 #define HARDWARE_VERSION_MAJOR 0
 #define HARDWARE_VERSION_MINOR 4
 
 #if(HARDWARE_VERSION_MAJOR == 0 && HARDWARE_VERSION_MINOR == 4)
+const byte PIN_MICROSD_CHIP_SELECT = 10;
+const byte PIN_IMU_POWER = 22;
+#elif(HARDWARE_VERSION_MAJOR == 0 && HARDWARE_VERSION_MINOR == 5)
+const byte PIN_MICROSD_CHIP_SELECT = 10;
+const byte PIN_IMU_POWER = 22;
+#elif(HARDWARE_VERSION_MAJOR == 0 && HARDWARE_VERSION_MINOR == 6)
 const byte PIN_MICROSD_CHIP_SELECT = 10;
 const byte PIN_IMU_POWER = 22;
 #elif(HARDWARE_VERSION_MAJOR == 1 && HARDWARE_VERSION_MINOR == 0)
@@ -80,6 +87,7 @@ enum returnStatus {
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #include <Wire.h>
 TwoWire qwiic(1); //Will use pads 8/9
+#define QWIIC_PULLUPS 1 // Default to 1k pull-ups on the Qwiic bus
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 //EEPROM for storing settings
@@ -163,7 +171,8 @@ void setup() {
   Serial.begin(settings.serialTerminalBaudRate);
   if (settings.serialPlotterMode == false) Serial.printf("Artemis OpenLog Geophone Logger v%d.%d\n", FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR);
 
-  beginQwiic();
+  beginQwiic(); //Enable qwiic power and start I2C
+  delay(250); // Allow extra time for the qwiic sensors to power up
 
   analogReadResolution(14); //Increase from default of 10
 
@@ -369,6 +378,7 @@ void beginQwiic()
   pinMode(PIN_QWIIC_POWER, OUTPUT);
   qwiicPowerOn();
   qwiic.begin();
+  qwiic.setPullups(QWIIC_PULLUPS); //Just to make it really clear what pull-ups are being used, set pullups here.
 }
 
 void beginSD()

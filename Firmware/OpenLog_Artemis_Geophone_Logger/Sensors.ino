@@ -190,7 +190,7 @@ void setMaxI2CSpeed()
 {
   uint32_t maxSpeed = 400000; //Assume 400kHz
 
-  //Search nodes for MCP9600s and Ublox modules
+  //Search nodes for Ublox modules
   node *temp = head;
   while (temp != NULL)
   {
