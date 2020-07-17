@@ -42,6 +42,16 @@
 const int FIRMWARE_VERSION_MAJOR = 1;
 const int FIRMWARE_VERSION_MINOR = 0;
 
+//Define the OLA board identifier:
+//  This is an int which is unique to this variant of the OLA and which allows us
+//  to make sure that the settings in EEPROM are correct for this version of the OLA
+//  (sizeOfSettings is not necessarily unique and we want to avoid problems when swapping from one variant to another)
+//  It is the sum of:
+//    the variant * 0x100 (OLA = 1; GNSS_LOGGER = 2; GEOPHONE_LOGGER = 3)
+//    the major firmware version * 0x10
+//    the minor firmware version
+#define OLA_IDENTIFIER 0x310
+
 #include "settings.h"
 
 //Define the pin functions

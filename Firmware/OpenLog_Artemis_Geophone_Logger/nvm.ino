@@ -18,15 +18,25 @@ void loadSettings()
   EEPROM.get(0, tempSize); //Load the sizeOfSettings
   if (tempSize != sizeof(settings))
   {
-    //Serial.println("Settings wrong size. Default settings applied");
+    Serial.println("Settings wrong size. Default settings applied");
+    recordSystemSettings(); //Record default settings to EEPROM and config file. At power on, settings are in default state
+  }
+
+  //Check that the olaIdentifier is correct
+  //(It is possible for two different versions of the code to have the same sizeOfSettings - which causes problems!)
+  int tempIdentifier = 0;
+  EEPROM.get(sizeof(int), tempIdentifier); //Load the identifier from the EEPROM location after sizeOfSettings (int)
+  if (tempIdentifier != OLA_IDENTIFIER)
+  {
+    Serial.println("Settings are not valid for this variant of the OLA. Default settings applied");
     recordSystemSettings(); //Record default settings to EEPROM and config file. At power on, settings are in default state
   }
 
   //Read current settings
   EEPROM.get(0, settings);
 
-  loadSystemSettingsFromFile(); //Load any settings from config file. This will over-write any pre-existing EEPROM settings.
-  recordSystemSettings(); //Record these new settings to EEPROM and config file to be sure they are the same
+  if (loadSystemSettingsFromFile() == true) //Load any settings from config file. This will over-write any pre-existing EEPROM settings.
+    recordSystemSettings(); //Record these new settings to EEPROM and config file to be sure they are the same.
 }
 
 //Record the current settings struct to EEPROM and then to config file
@@ -53,6 +63,7 @@ void recordSystemSettingsToFile()
     }
 
     settingsFile.println("sizeOfSettings=" + (String)settings.sizeOfSettings);
+    settingsFile.println("olaIdentifier=" + (String)settings.olaIdentifier);
     settingsFile.println("nextDataLogNumber=" + (String)settings.nextDataLogNumber);
 
     // Convert uint64_t to string
@@ -232,6 +243,8 @@ bool parseLine(char* str) {
       Serial.printf("Warning: Settings size is %d but current firmware expects %d. Attempting to use settings from file.\n", d, sizeof(settings));
 
   }
+  else if (strcmp(settingName, "olaIdentifier") == 0)
+    settings.olaIdentifier = d;
   else if (strcmp(settingName, "nextDataLogNumber") == 0)
     settings.nextDataLogNumber = d;
   else if (strcmp(settingName, "usBetweenReadings") == 0)

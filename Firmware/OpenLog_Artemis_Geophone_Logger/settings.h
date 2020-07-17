@@ -72,7 +72,8 @@ struct struct_ADS122C04 {
 
 //This is all the settings that can be set on OpenLog. It's recorded to NVM and the config file.
 struct struct_settings {
-  int sizeOfSettings = 0;
+  int sizeOfSettings = 0; //sizeOfSettings **must** be the first entry and must be int
+  int olaIdentifier = OLA_IDENTIFIER; // olaIdentifier **must** be the second entry
   int nextDataLogNumber = 1;
   //uint32_t: Largest is 4,294,967,295 or 4,294s or 71 minutes between readings.
   //uint64_t: Largest is 9,223,372,036,854,775,807 or 9,223,372,036,854s or 292,471 years between readings.
