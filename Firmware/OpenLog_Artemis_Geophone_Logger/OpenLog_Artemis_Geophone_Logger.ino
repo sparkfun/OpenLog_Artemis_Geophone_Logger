@@ -1,7 +1,7 @@
 /*
   OpenLog Artemis Geophone Logger
   By: Paul Clark (PaulZC)
-  Date: July 17th, 2020
+  Date: July 18th, 2020
   Version: V1.0
 
   This firmware runs on the OpenLog Artemis and is dedicated to logging data from the SM-24 geophone:
@@ -86,6 +86,7 @@ const byte PIN_QWIIC_POWER = 18;
 const byte PIN_STAT_LED = 19;
 const byte PIN_IMU_INT = 37;
 const byte PIN_IMU_CHIP_SELECT = 44;
+const byte PIN_STOP_LOGGING = 32;
 
 enum returnStatus {
   STATUS_GETBYTE_TIMEOUT = 255,
@@ -143,6 +144,7 @@ char peakFreq[50]; //Array to hold the peak frequency and amplitude and count
 unsigned long lastReadTime = 0; //Used to delay until user wants to record a new reading
 const byte menuTimeout = 15; //Menus will exit/timeout after this number of seconds
 volatile static bool samplingEnabled = true; // Flag to indicate if sampling is enabled (sampling is paused while the menu is open)
+volatile static bool stopLoggingSeen = false; //Flag to indicate if we should stop logging
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 //Geophone settings
@@ -180,6 +182,15 @@ void setup() {
   Serial.flush(); //Complete any previous prints
   Serial.begin(settings.serialTerminalBaudRate);
   if (settings.serialPlotterMode == false) Serial.printf("Artemis OpenLog Geophone Logger v%d.%d\n", FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR);
+
+  if (settings.useGPIO32ForStopLogging == true)
+  {
+    Serial.println("Stop Logging is enabled. Pull GPIO pin 32 to GND to stop logging.");
+    pinMode(PIN_STOP_LOGGING, INPUT_PULLUP);
+    delay(1); // Let the pin stabilize
+    attachInterrupt(digitalPinToInterrupt(PIN_STOP_LOGGING), stopLoggingISR, FALLING); // Enable the interrupt
+    stopLoggingSeen = false; // Make sure the flag is clear
+  }
 
   beginQwiic(); //Enable qwiic power and start I2C
   delay(250); // Allow extra time for the qwiic sensors to power up
@@ -381,6 +392,11 @@ void loop() {
       }
     }
   }
+
+  if ((settings.useGPIO32ForStopLogging == true) && (stopLoggingSeen == true)) // Has the user pressed the stop logging button?
+  {
+    stopLogging();
+  }
 }
 
 void beginQwiic()
@@ -522,4 +538,10 @@ extern "C" void am_stimer_cmpr5_isr(void)
 
   if (samplingEnabled == true)
     sampling_interrupt();
+}
+
+//Stop Logging ISR
+void stopLoggingISR(void)
+{
+  stopLoggingSeen = true;
 }

@@ -35,8 +35,10 @@ void loadSettings()
   //Read current settings
   EEPROM.get(0, settings);
 
-  if (loadSystemSettingsFromFile() == true) //Load any settings from config file. This will over-write any pre-existing EEPROM settings.
-    recordSystemSettings(); //Record these new settings to EEPROM and config file to be sure they are the same.
+  loadSystemSettingsFromFile(); //Load any settings from config file. This will over-write any pre-existing EEPROM settings.
+  //Record these new settings to EEPROM and config file to be sure they are the same
+  //(do this even if loadSystemSettingsFromFile returned false)
+  recordSystemSettings();
 }
 
 //Record the current settings struct to EEPROM and then to config file
@@ -121,6 +123,8 @@ void recordSystemSettingsToFile()
     settingsFile.println("threshold=" + (String)settings.threshold);
     settingsFile.println("geophoneGain=" + (String)settings.geophoneGain);
     settingsFile.println("serialPlotterMode=" + (String)settings.serialPlotterMode);
+    settingsFile.println("useGPIO32ForStopLogging=" + (String)settings.useGPIO32ForStopLogging);
+    
     settingsFile.close();
   }
 }
@@ -142,7 +146,7 @@ bool loadSystemSettingsFromFile()
         return (false);
       }
 
-      char line[50];
+      char line[60];
       int lineNumber = 0;
 
       while (settingsFile.available()) {
@@ -208,7 +212,7 @@ bool parseLine(char* str) {
   if (!str) return false;
 
   //Store this setting name
-  char settingName[30];
+  char settingName[40];
   sprintf(settingName, "%s", str);
 
   //Move pointer to end of line
@@ -303,6 +307,8 @@ bool parseLine(char* str) {
     settings.geophoneGain = d;
   else if (strcmp(settingName, "serialPlotterMode") == 0)
     settings.serialPlotterMode = d;
+  else if (strcmp(settingName, "useGPIO32ForStopLogging") == 0)
+    settings.useGPIO32ForStopLogging = d;
   else
     Serial.printf("Unknown setting %s on line: %s\n", settingName, str);
 

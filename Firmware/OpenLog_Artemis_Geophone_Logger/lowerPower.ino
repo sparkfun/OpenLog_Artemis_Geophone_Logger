@@ -7,6 +7,13 @@ void powerDown()
   //Prevent voltage supervisor from waking us from sleep
   detachInterrupt(digitalPinToInterrupt(PIN_POWER_LOSS));
 
+  //Prevent stop logging button from waking us from sleep
+  if (settings.useGPIO32ForStopLogging == true)
+  {
+    detachInterrupt(digitalPinToInterrupt(PIN_STOP_LOGGING)); // Disable the interrupt
+    pinMode(PIN_STOP_LOGGING, INPUT); // Remove the pull-up
+  }
+
   //We need to power down ASAP. We don't have time to let the SD card shut down gracefully.
 
 //  //Save files before going to sleep
@@ -89,6 +96,24 @@ void powerDown()
   {
     am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP); //Sleep
   }
+}
+
+void stopLogging(void)
+{
+  detachInterrupt(digitalPinToInterrupt(PIN_STOP_LOGGING)); // Disable the interrupt
+  
+  //Save files before going to sleep
+  if (online.dataLogging == true)
+  {
+    sensorDataFile.sync();
+    sensorDataFile.close(); //No need to close files. https://forum.arduino.cc/index.php?topic=149504.msg1125098#msg1125098
+  }
+  
+  Serial.print("Logging is stopped. Please reset OpenLog Artemis and open a terminal at ");
+  Serial.print((String)settings.serialTerminalBaudRate);
+  Serial.println("bps...");
+  delay(sdPowerDownDelay); // Give the SD card time to shut down
+  powerDown();
 }
 
 void qwiicPowerOn()

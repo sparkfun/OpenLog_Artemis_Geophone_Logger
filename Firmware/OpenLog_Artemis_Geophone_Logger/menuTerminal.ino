@@ -30,6 +30,10 @@ void menuLogRate()
     if (settings.openNewLogFilesAfter == 0) Serial.println(" (Never)");
     else Serial.println();
 
+    Serial.print("7) Use pin 32 to Stop Logging: ");
+    if (settings.useGPIO32ForStopLogging == true) Serial.println("Yes");
+    else Serial.println("No");
+
     Serial.println("x) Exit");
 
     int incoming = getNumber(menuTimeout); //Timeout after x seconds
@@ -112,6 +116,25 @@ void menuLogRate()
         Serial.println("Error: Invalid interval");
       else
         settings.openNewLogFilesAfter = tempSeconds;
+    }
+    else if (incoming == 7)
+    {
+      if (settings.useGPIO32ForStopLogging == true)
+      {
+        // Disable stop logging
+        settings.useGPIO32ForStopLogging = false;
+        detachInterrupt(digitalPinToInterrupt(PIN_STOP_LOGGING)); // Disable the interrupt
+        pinMode(PIN_STOP_LOGGING, INPUT); // Remove the pull-up
+      }
+      else
+      {
+        // Enable stop logging
+        settings.useGPIO32ForStopLogging = true;
+        pinMode(PIN_STOP_LOGGING, INPUT_PULLUP);
+        delay(1); // Let the pin stabilize
+        attachInterrupt(digitalPinToInterrupt(PIN_STOP_LOGGING), stopLoggingISR, FALLING); // Enable the interrupt
+        stopLoggingSeen = false; // Make sure the flag is clear
+      }
     }
     else if (incoming == STATUS_PRESSED_X)
       return;
