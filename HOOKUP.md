@@ -77,7 +77,7 @@ The Qwiic PT100 is designed to measure temperature very accurately using a 100â„
 24-bit analog-to-digital converter (ADC) which is perfect for digitizing the signal from the geophone. It has a differential input as well as adjustable gain (x1 to x128), which we can use to
 amplify the small signals from the geophone.
 
-Make sure the three split pads on the back of the PT100 (A, B and C) are clear.
+Please check that the A/B/C jumpers on the back of the Qwiic PT100 are open. (They are open by default. Please clear them if you have been using the PT100 for 3-wire or 2-wire sensing.)
 
 Connect the two wires from the geophone to terminals 2 and 3 on the Qwiic PT100. (The polarity does not matter, connect either wire to either terminal.)
 
