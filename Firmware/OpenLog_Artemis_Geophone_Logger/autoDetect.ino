@@ -1,40 +1,3 @@
-/*
-  Autodetect theory of operation:
-
-  The TCA9548A I2C mux introduces a can of worms but enables multiple (up to 64) of
-  a single I2C device to be connected to a given I2C bus. You just have to turn on/off
-  a given port while you communicate with said device.
-
-  This is how the autodection algorithm works:
-   Scan bus for muxes (0x70 to 0x77)
-   Begin() any muxes. This causes them to turn off all their ports.
-   With any possible muxes turned off, finish scanning main branch
-   Any detected device is stored as a node in a linked list containing their address and device type,
-   If muxes are found, begin scanning mux0/port0. Any new device is stored with their address and mux address/port.
-   Begin() all devices in our linked list. Connections through muxes are performed as needed.
-
-  All of this works and has the side benefit of enabling regular devices, that support multiple address, to
-  auto-detect, begin(), and behave as before, but now in multiples.
-
-  In the case where a device has two I2C address that are used in one library (ex: MS8607) the first address is stored in
-  the node list, the 2nd address is ignored.
-
-  Future work:
-
-  Theoretically you could attach 8 muxes configured to 0x71 off the 8 ports of an 0x70 mux. We could
-  do this for other muxes as well to create a mux monster:
-   - 0x70 - (port 0) 0x71 - 8 ports - device * 8
-                     0x72 - 8 ports - device * 8
-                     0x73 - 8 ports - device * 8
-                     0x74 - 8 ports - device * 8
-                     0x75 - 8 ports - device * 8
-                     0x76 - 8 ports - device * 8
-                     0x77 - 8 ports - device * 8
-  This would allow a maximum of 8 * 7 * 8 = 448 of the *same* I2C device address to be
-  connected at once. We don't support this sub-muxing right now. So the max we support
-  is 64 identical address devices. That should be enough.
-*/
-
 //Given node number, get a pointer to the node
 node *getNodePointer(uint8_t nodeNumber)
 {
@@ -53,17 +16,15 @@ node *getNodePointer(uint8_t nodeNumber)
   return (NULL);
 }
 
-node *getNodePointer(deviceType_e deviceType, uint8_t address, uint8_t muxAddress, uint8_t portNumber)
+node *getNodePointer(deviceType_e deviceType, uint8_t address)
 {
   //Search the list of nodes
   node *temp = head;
   while (temp != NULL)
   {
     if (temp->address == address)
-      if (temp->muxAddress == muxAddress)
-        if (temp->portNumber == portNumber)
-          if (temp->deviceType == deviceType)
-            return (temp);
+      if (temp->deviceType == deviceType)
+        return (temp);
 
     temp = temp->next;
   }
@@ -88,20 +49,20 @@ void *getConfigPointer(uint8_t nodeNumber)
 }
 
 //Given a bunch of ID'ing info, return the config pointer to a node
-void *getConfigPointer(deviceType_e deviceType, uint8_t address, uint8_t muxAddress, uint8_t portNumber)
+void *getConfigPointer(deviceType_e deviceType, uint8_t address)
 {
   //Search the list of nodes
-  node *temp = getNodePointer(deviceType, address, muxAddress, portNumber);
+  node *temp = getNodePointer(deviceType, address);
   if (temp == NULL) return (NULL);
   return (temp->configPtr);
 }
 
 //Add a device to the linked list
 //Creates a class but does not begin or configure the device
-bool addDevice(deviceType_e deviceType, uint8_t address, uint8_t muxAddress, uint8_t portNumber)
+bool addDevice(deviceType_e deviceType, uint8_t address)
 {
-  //Ignore devices we've already logged. This was causing the mux to get tested, a begin() would happen, and the mux would be reset.
-  if (deviceExists(deviceType, address, muxAddress, portNumber) == true) return false;
+  //Ignore devices we've already logged
+  if (deviceExists(deviceType, address) == true) return false;
 
   //Create class instantiation for this device
   //Create logging details for this device
@@ -111,21 +72,13 @@ bool addDevice(deviceType_e deviceType, uint8_t address, uint8_t muxAddress, uin
   //Setup this node
   temp->deviceType = deviceType;
   temp->address = address;
-  temp->muxAddress = muxAddress;
-  temp->portNumber = portNumber;
 
   //Instantiate a class and settings struct for this device
   switch (deviceType)
   {
-    case DEVICE_MULTIPLEXER:
-      {
-        temp->classPtr = new QWIICMUX; //This allocates the memory needed for this class
-        temp->configPtr = new struct_multiplexer;
-      }
-      break;
     case DEVICE_GPS_UBLOX:
       {
-        temp->classPtr = new SFE_UBLOX_GPS;
+        temp->classPtr = new SFE_UBLOX_GNSS;
         temp->configPtr = new struct_uBlox;
       }
       break;
@@ -133,6 +86,18 @@ bool addDevice(deviceType_e deviceType, uint8_t address, uint8_t muxAddress, uin
       {
         temp->classPtr = new SFE_ADS122C04;
         temp->configPtr = new struct_ADS122C04;
+      }
+      break;
+    case DEVICE_ADC_ADS1015:
+      {
+        temp->classPtr = new ADS1015;
+        temp->configPtr = new struct_ADS1015;
+      }
+      break;
+    case DEVICE_ADC_ADS1219:
+      {
+        temp->classPtr = new SfeADS1219ArdI2C;
+        temp->configPtr = new struct_ADS1219;
       }
       break;
     default:
@@ -173,30 +138,36 @@ bool beginQwiicDevices()
 
   while (temp != NULL)
   {
-    openConnection(temp->muxAddress, temp->portNumber); //Connect to this device through muxes as needed
-
     //Attempt to begin the device
     switch (temp->deviceType)
     {
-      case DEVICE_MULTIPLEXER:
-        {
-          QWIICMUX *tempDevice = (QWIICMUX *)temp->classPtr;
-          temp->online = tempDevice->begin(temp->address, qwiic); //Address, Wire port
-        }
-        break;
       case DEVICE_GPS_UBLOX:
         {
-          qwiic.setPullups(0); //Disable pullups for u-blox comms.
-          SFE_UBLOX_GPS *tempDevice = (SFE_UBLOX_GPS *)temp->classPtr;
+          setQwiicPullups(0); //Disable pullups for u-blox comms.
+          SFE_UBLOX_GNSS *tempDevice = (SFE_UBLOX_GNSS *)temp->classPtr;
           struct_uBlox *nodeSetting = (struct_uBlox *)temp->configPtr; //Create a local pointer that points to same spot as node does
           temp->online = tempDevice->begin(qwiic, temp->address); //Wire port, Address
-          qwiic.setPullups(QWIIC_PULLUPS); //Re-enable pullups.
+          setQwiicPullups(QWIIC_PULLUPS); //Re-enable pullups.
         }
         break;
       case DEVICE_ADC_ADS122C04:
         {
           SFE_ADS122C04 *tempDevice = (SFE_ADS122C04 *)temp->classPtr;
           if (tempDevice->begin(temp->address, qwiic) == true) //Address, Wire port. Returns true on success.
+            temp->online = true;
+        }
+        break;
+      case DEVICE_ADC_ADS1015:
+        {
+          ADS1015 *tempDevice = (ADS1015 *)temp->classPtr;
+          if (tempDevice->begin(temp->address, qwiic) == true) //Address, Wire port. Returns true on success.
+            temp->online = true;
+        }
+        break;
+      case DEVICE_ADC_ADS1219:
+        {
+          SfeADS1219ArdI2C *tempDevice = (SfeADS1219ArdI2C *)temp->classPtr;
+          if (tempDevice->begin(qwiic, temp->address) == true) //Wire port, Address. Returns true on success.
             temp->online = true;
         }
         break;
@@ -230,10 +201,7 @@ void printOnlineDevice()
     char sensorOnlineText[75];
     if (temp->online)
     {
-      if (temp->muxAddress == 0)
-        sprintf(sensorOnlineText, "%s online at address 0x%02X\n", getDeviceName(temp->deviceType), temp->address);
-      else
-        sprintf(sensorOnlineText, "%s online at address 0x%02X.0x%02X.%d\n", getDeviceName(temp->deviceType), temp->address, temp->muxAddress, temp->portNumber);
+      sprintf(sensorOnlineText, "%s online at address 0x%02X\n", getDeviceName(temp->deviceType), temp->address);
     }
     else
     {
@@ -257,58 +225,42 @@ void configureDevice(node * temp)
 {
   uint8_t deviceType = (uint8_t)temp->deviceType;
 
-  openConnection(temp->muxAddress, temp->portNumber); //Connect to this device through muxes as needed
-
   switch (deviceType)
   {
-    case DEVICE_MULTIPLEXER:
-      //Nothing to configure
-      break;
     case DEVICE_GPS_UBLOX:
       {
-        qwiic.setPullups(0); //Disable pullups for u-blox comms.
+        setQwiicPullups(0); //Disable pullups for u-blox comms.
         
-        SFE_UBLOX_GPS *sensor = (SFE_UBLOX_GPS *)temp->classPtr;
+        SFE_UBLOX_GNSS *sensor = (SFE_UBLOX_GNSS *)temp->classPtr;
         struct_uBlox *sensorSetting = (struct_uBlox *)temp->configPtr;
 
         sensor->setI2COutput(COM_TYPE_UBX); //Set the I2C port to output UBX only (turn off NMEA noise)
 
         //sensor->setAutoPVT(true); //Tell the GPS to "send" each solution
         sensor->setAutoPVT(false); //We will poll the device for PVT solutions
-        if (1000000ULL / settings.usBetweenReadings <= 1) //If we are slower than 1Hz logging rate
-          // setNavigationFrequency expects a uint8_t to define the number of updates per second
-          // So the slowest rate we can set with setNavigationFrequency is 1Hz
-          // (Whereas UBX_CFG_RATE can actually support intervals as slow as 65535ms)
-          sensor->setNavigationFrequency(1); //Set output rate to 1Hz
-        else if (1000000ULL / settings.usBetweenReadings <= 10) //If we are slower than 10Hz logging rate
-          sensor->setNavigationFrequency((uint8_t)(1000000ULL / settings.usBetweenReadings)); //Set output rate equal to our query rate
-        else
-          sensor->setNavigationFrequency(10); //Set nav freq to 10Hz. Max output depends on the module used.
+        sensor->setNavigationFrequency(1); //Set output rate to 1Hz
 
         sensor->saveConfiguration(); //Save the current settings to flash and BBR
         
-        qwiic.setPullups(QWIIC_PULLUPS); //Re-enable pullups.
+        setQwiicPullups(QWIIC_PULLUPS); //Re-enable pullups.
       }
       break;
     case DEVICE_ADC_ADS122C04:
       {
         SFE_ADS122C04 *sensor = (SFE_ADS122C04 *)temp->classPtr;
         struct_ADS122C04 *sensorSetting = (struct_ADS122C04 *)temp->configPtr;
-
-        //Configure the wite mode for readPT100Centigrade and readPT100Fahrenheit
-        //(readInternalTemperature and readRawVoltage change and restore the mode automatically)
-        if (sensorSetting->useFourWireMode)
-          sensor->configureADCmode(ADS122C04_4WIRE_MODE);
-        else if (sensorSetting->useThreeWireMode)
-          sensor->configureADCmode(ADS122C04_3WIRE_MODE);
-        else if (sensorSetting->useTwoWireMode)
-          sensor->configureADCmode(ADS122C04_2WIRE_MODE);
-        else if (sensorSetting->useFourWireHighTemperatureMode)
-          sensor->configureADCmode(ADS122C04_4WIRE_HI_TEMP);
-        else if (sensorSetting->useThreeWireHighTemperatureMode)
-          sensor->configureADCmode(ADS122C04_3WIRE_HI_TEMP);
-        else if (sensorSetting->useTwoWireHighTemperatureMode)
-          sensor->configureADCmode(ADS122C04_2WIRE_HI_TEMP);
+      }
+      break;
+    case DEVICE_ADC_ADS1015:
+      {
+        ADS1015 *sensor = (ADS1015 *)temp->classPtr;
+        struct_ADS1015 *sensorSetting = (struct_ADS1015 *)temp->configPtr;
+      }
+      break;
+    case DEVICE_ADC_ADS1219:
+      {
+        SfeADS1219ArdI2C *sensor = (SfeADS1219ArdI2C *)temp->classPtr;
+        struct_ADS1219 *sensorSetting = (struct_ADS1219 *)temp->configPtr;
       }
       break;
     default:
@@ -341,14 +293,17 @@ FunctionPointer getConfigFunctionPtr(uint8_t nodeNumber)
 
   switch (deviceType)
   {
-    case DEVICE_MULTIPLEXER:
-      ptr = (FunctionPointer)menuConfigure_Multiplexer;
-      break;
     case DEVICE_GPS_UBLOX:
       ptr = (FunctionPointer)menuConfigure_uBlox;
       break;
     case DEVICE_ADC_ADS122C04:
       ptr = (FunctionPointer)menuConfigure_ADS122C04;
+      break;
+    case DEVICE_ADC_ADS1015:
+      ptr = (FunctionPointer)menuConfigure_ADS1015;
+      break;
+    case DEVICE_ADC_ADS1219:
+      ptr = (FunctionPointer)menuConfigure_ADS1219;
       break;
     default:
       if (settings.serialPlotterMode == false) Serial.println("getConfigFunctionPtr: Unknown device type");
@@ -361,50 +316,17 @@ FunctionPointer getConfigFunctionPtr(uint8_t nodeNumber)
 
 //Search the linked list for a given address
 //Returns true if this device address already exists in our system
-bool deviceExists(deviceType_e deviceType, uint8_t address, uint8_t muxAddress, uint8_t portNumber)
+bool deviceExists(deviceType_e deviceType, uint8_t address)
 {
   node *temp = head;
   while (temp != NULL)
   {
     if (temp->address == address)
-      if (temp->muxAddress == muxAddress)
-        if (temp->portNumber == portNumber)
-          if (temp->deviceType == deviceType) return (true);
-
-    //Devices that were discovered on the main branch will be discovered over and over again
-    //If a device has a 0/0 mux/port address, it's on the main branch and exists on all
-    //sub branches.
-    if (temp->address == address)
-      if (temp->muxAddress == 0)
-        if (temp->portNumber == 0)
-          if (temp->deviceType == deviceType) return (true);
+      if (temp->deviceType == deviceType) return (true);
 
     temp = temp->next;
   }
   return (false);
-}
-
-//Given the address of a device, enable muxes appropriately to open connection access device
-//Return true if connection was opened
-bool openConnection(uint8_t muxAddress, uint8_t portNumber)
-{
-  if (head == NULL)
-  {
-    if (settings.serialPlotterMode == false) Serial.println("OpenConnection Error: No devices in list");
-    return false;
-  }
-
-  if (muxAddress == 0) //This device is on main branch, nothing needed
-    return true;
-
-  //Get the pointer to the node that contains this mux address
-  node *muxNode = getNodePointer(DEVICE_MULTIPLEXER, muxAddress, 0, 0);
-  QWIICMUX *myMux = (QWIICMUX *)muxNode->classPtr;
-
-  //Connect to this mux and port
-  myMux->setPort(portNumber);
-
-  return (true);
 }
 
 //Bubble sort the given linked list by the device address
@@ -444,24 +366,18 @@ void swap(struct node * a, struct node * b)
 
   temp.deviceType = a->deviceType;
   temp.address = a->address;
-  temp.portNumber = a->portNumber;
-  temp.muxAddress = a->muxAddress;
   temp.online = a->online;
   temp.classPtr = a->classPtr;
   temp.configPtr = a->configPtr;
 
   a->deviceType = b->deviceType;
   a->address = b->address;
-  a->portNumber = b->portNumber;
-  a->muxAddress = b->muxAddress;
   a->online = b->online;
   a->classPtr = b->classPtr;
   a->configPtr = b->configPtr;
 
   b->deviceType = temp.deviceType;
   b->address = temp.address;
-  b->portNumber = temp.portNumber;
-  b->muxAddress = temp.muxAddress;
   b->online = temp.online;
   b->classPtr = temp.classPtr;
   b->configPtr = temp.configPtr;
@@ -472,47 +388,21 @@ void swap(struct node * a, struct node * b)
 
 // Available Qwiic devices
 //We no longer use defines in the search table. These are just here for reference.
-#define ADR_VEML6075 0x10
-#define ADR_NAU7802 0x2A
-#define ADR_VL53L1X 0x29
-#define ADR_AHT20 0x38
-#define ADR_MS8607 0x40 //Humidity portion of the MS8607 sensor
 #define ADR_UBLOX 0x42 //But can be set to any address
 #define ADR_ADS122C04 0x45 //Alternates: 0x44, 0x41 and 0x40
-#define ADR_TMP117 0x48 //Alternates: 0x49, 0x4A, and 0x4B
-#define ADR_SGP30 0x58
-#define ADR_CCS811_2 0x5A
-#define ADR_CCS811_1 0x5B
-#define ADR_LPS25HB_2 0x5C
-#define ADR_LPS25HB_1 0x5D
-#define ADR_VCNL4040_OR_MCP9600 0x60
-#define ADR_SCD30 0x61
-#define ADR_MCP9600_1 0x67 //0x60 to 0x67
-#define ADR_MULTIPLEXER 0x70 //0x70 to 0x77
-#define ADR_SHTC3 0x70
-#define ADR_BME280_2 0x76
-#define ADR_MS5637 0x76
-//#define ADR_MS8607 0x76 //Pressure portion of the MS8607 sensor. We'll catch the 0x40 first
-#define ADR_BME280_1 0x77
+#define ADR_ADS1015 0x48 //Alternates: 0x49, 0x4A and 0x4B
+#define ADR_ADS1219 0x40 //Alternates: 0x41 to 0x4F
 
 //Given an address, returns the device type if it responds as we would expect
-deviceType_e testDevice(uint8_t i2cAddress, uint8_t muxAddress, uint8_t portNumber)
+deviceType_e testDevice(uint8_t i2cAddress)
 {
   switch (i2cAddress)
   {
     case 0x40:
       {
-        //Confidence: High - Configures ADC mode
-        SFE_ADS122C04 sensor;
-        if (sensor.begin(i2cAddress, qwiic) == true) //Address, Wire port
-          return (DEVICE_ADC_ADS122C04);
-      }
-      break;
-    case 0x41:
-      {
-        //Confidence: High - Configures ADC mode
-        SFE_ADS122C04 sensor;
-        if (sensor.begin(i2cAddress, qwiic) == true) //Address, Wire port
+        //Confidence: Medium - reads Configuration Register
+        SfeADS1219ArdI2C sensor;
+        if (sensor.begin(qwiic, i2cAddress) == true) //Wire port, Address
           return (DEVICE_ADC_ADS122C04);
       }
       break;
@@ -520,17 +410,16 @@ deviceType_e testDevice(uint8_t i2cAddress, uint8_t muxAddress, uint8_t portNumb
       {
         //Confidence: High - Sends/receives CRC checked data response
       
-        qwiic.setPullups(0); //Disable pullups to minimize CRC issues
-        SFE_UBLOX_GPS sensor;
+        setQwiicPullups(0); //Disable pullups to minimize CRC issues
+        SFE_UBLOX_GNSS sensor;
         if (sensor.begin(qwiic, i2cAddress) == true) //Wire port, address
         {
-          qwiic.setPullups(QWIIC_PULLUPS); //Re-enable pullups to prevent ghosts at 0x43 onwards
+          setQwiicPullups(QWIIC_PULLUPS); //Re-enable pullups to prevent ghosts at 0x43 onwards
           return (DEVICE_GPS_UBLOX);
         }
-        qwiic.setPullups(QWIIC_PULLUPS); //Re-enable pullups for normal discovery
+        setQwiicPullups(QWIIC_PULLUPS); //Re-enable pullups for normal discovery
       }
       break;
-    case 0x44:
     case 0x45:
       {
         //Confidence: High - Configures ADC mode
@@ -539,98 +428,17 @@ deviceType_e testDevice(uint8_t i2cAddress, uint8_t muxAddress, uint8_t portNumb
           return (DEVICE_ADC_ADS122C04);
       }
       break;
-    case 0x70:
+    case 0x48:
       {
-        //Ignore devices we've already recorded. This was causing the mux to get tested, a begin() would happen, and the mux would be reset.
-        if (deviceExists(DEVICE_MULTIPLEXER, i2cAddress, muxAddress, portNumber) == true) return (DEVICE_MULTIPLEXER);
-
-        //Confidence: Medium - Write/Read/Clear to 0x00
-        QWIICMUX multiplexer;
-        if (multiplexer.begin(i2cAddress, qwiic) == true) //Address, Wire port
-          return (DEVICE_MULTIPLEXER);
-      }
-      break;
-    case 0x71:
-      {
-        //Ignore devices we've already recorded. This was causing the mux to get tested, a begin() would happen, and the mux would be reset.
-        if (deviceExists(DEVICE_MULTIPLEXER, i2cAddress, muxAddress, portNumber) == true) return (DEVICE_MULTIPLEXER);
-
-        //Confidence: Medium - Write/Read/Clear to 0x00
-        QWIICMUX multiplexer;
-        if (multiplexer.begin(i2cAddress, qwiic) == true) //Address, Wire port
-          return (DEVICE_MULTIPLEXER);
-      }
-      break;
-    case 0x72:
-      {
-        //Ignore devices we've already recorded. This was causing the mux to get tested, a begin() would happen, and the mux would be reset.
-        if (deviceExists(DEVICE_MULTIPLEXER, i2cAddress, muxAddress, portNumber) == true) return (DEVICE_MULTIPLEXER);
-
-        //Confidence: Medium - Write/Read/Clear to 0x00
-        QWIICMUX multiplexer;
-        if (multiplexer.begin(i2cAddress, qwiic) == true) //Address, Wire port
-          return (DEVICE_MULTIPLEXER);
-      }
-      break;
-    case 0x73:
-      {
-        //Ignore devices we've already recorded. This was causing the mux to get tested, a begin() would happen, and the mux would be reset.
-        if (deviceExists(DEVICE_MULTIPLEXER, i2cAddress, muxAddress, portNumber) == true) return (DEVICE_MULTIPLEXER);
-
-        //Confidence: Medium - Write/Read/Clear to 0x00
-        QWIICMUX multiplexer;
-        if (multiplexer.begin(i2cAddress, qwiic) == true) //Address, Wire port
-          return (DEVICE_MULTIPLEXER);
-      }
-      break;
-    case 0x74:
-      {
-        //Ignore devices we've already recorded. This was causing the mux to get tested, a begin() would happen, and the mux would be reset.
-        if (deviceExists(DEVICE_MULTIPLEXER, i2cAddress, muxAddress, portNumber) == true) return (DEVICE_MULTIPLEXER);
-
-        //Confidence: Medium - Write/Read/Clear to 0x00
-        QWIICMUX multiplexer;
-        if (multiplexer.begin(i2cAddress, qwiic) == true) //Address, Wire port
-          return (DEVICE_MULTIPLEXER);
-      }
-      break;
-    case 0x75:
-      {
-        //Ignore devices we've already recorded. This was causing the mux to get tested, a begin() would happen, and the mux would be reset.
-        if (deviceExists(DEVICE_MULTIPLEXER, i2cAddress, muxAddress, portNumber) == true) return (DEVICE_MULTIPLEXER);
-
-        //Confidence: Medium - Write/Read/Clear to 0x00
-        QWIICMUX multiplexer;
-        if (multiplexer.begin(i2cAddress, qwiic) == true) //Address, Wire port
-          return (DEVICE_MULTIPLEXER);
-      }
-      break;
-    case 0x76:
-      {
-        //Ignore devices we've already recorded. This was causing the mux to get tested, a begin() would happen, and the mux would be reset.
-        if (deviceExists(DEVICE_MULTIPLEXER, i2cAddress, muxAddress, portNumber) == true) return (DEVICE_MULTIPLEXER);
-
-        //Confidence: Medium - Write/Read/Clear to 0x00
-        QWIICMUX multiplexer;
-        if (multiplexer.begin(i2cAddress, qwiic) == true) //Address, Wire port
-          return (DEVICE_MULTIPLEXER);
-      }
-      break;
-    case 0x77:
-      {
-        //Ignore devices we've already recorded. This was causing the mux to get tested, a begin() would happen, and the mux would be reset.
-        if (deviceExists(DEVICE_MULTIPLEXER, i2cAddress, muxAddress, portNumber) == true) return (DEVICE_MULTIPLEXER);
-        QWIICMUX multiplexer;
-        if (multiplexer.begin(i2cAddress, qwiic) == true) //Address, Wire port
-          return (DEVICE_MULTIPLEXER);
+        //Confidence: Low - basic beginTransmission test
+        ADS1015 sensor;
+        if (sensor.begin(i2cAddress, qwiic) == true) //Address, Wire port
+          return (DEVICE_ADC_ADS1015);
       }
       break;
     default:
       {
-        if (muxAddress == 0)
-          if (settings.serialPlotterMode == false) Serial.printf("Unknown device at address (0x%02X)\n", i2cAddress);
-        else
-          if (settings.serialPlotterMode == false) Serial.printf("Unknown device at address (0x%02X)(Mux:0x%02X Port:%d)\n", i2cAddress, muxAddress, portNumber);
+        if (settings.serialPlotterMode == false) Serial.printf("Unknown device at address (0x%02X)\n", i2cAddress);
         return DEVICE_UNKNOWN_DEVICE;
       }
       break;
@@ -644,14 +452,17 @@ const char* getDeviceName(deviceType_e deviceNumber)
 {
   switch (deviceNumber)
   {
-    case DEVICE_MULTIPLEXER:
-      return "Multiplexer";
-      break;
     case DEVICE_GPS_UBLOX:
       return "GPS-ublox";
       break;
     case DEVICE_ADC_ADS122C04:
       return "ADC-ADS122C04";
+      break;
+    case DEVICE_ADC_ADS1015:
+      return "ADC-ADS1015";
+      break;
+    case DEVICE_ADC_ADS1219:
+      return "ADC-ADS1219";
       break;
 
     case DEVICE_UNKNOWN_DEVICE:

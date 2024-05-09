@@ -15,15 +15,17 @@ void menuMain()
     //Serial.println("3) Detect / Configure Attached Devices");
     Serial.println("3) Configure Qwiic Settings");
 
-    Serial.println("4) Configure Geophone Gain and Threshold");
+    Serial.println("4) Configure Geophone Threshold");
+
+    Serial.println("5) Configure Attached Devices");
 
 #if(HARDWARE_VERSION_MAJOR == 0)
-    Serial.println("5) Configure Power Options");
+    Serial.println("6) Configure Power Options");
 #endif
 
     Serial.println("r) Reset all settings to default");
 
-    Serial.println("q) Quit: Close log files and power down");
+    Serial.println("q) Quit: close log files and power down");
 
     //Serial.println("d) Debug Menu");
 
@@ -35,14 +37,14 @@ void menuMain()
       menuLogRate();
     else if (incoming == '2')
       menuTimeStamp();
-    //else if (incoming == '3')
-    //  menuAttachedDevices();
     else if (incoming == '3')
       menuConfigure_QwiicBus();
     else if (incoming == '4')
       menuThreshold();
-#if(HARDWARE_VERSION_MAJOR == 0)
     else if (incoming == '5')
+      menuAttachedDevices();
+#if(HARDWARE_VERSION_MAJOR == 0)
+    else if (incoming == '6')
       menuPower();
 #endif
     else if (incoming == 'd')
@@ -83,7 +85,7 @@ void menuMain()
         Serial.print((String)settings.serialTerminalBaudRate);
         Serial.println("bps...");
         delay(sdPowerDownDelay); // Give the SD card time to shut down
-        powerDown();
+        powerDownOLA();
       }
       else
         Serial.println("Quit aborted");

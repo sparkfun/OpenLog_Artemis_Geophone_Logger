@@ -8,7 +8,7 @@ SparkFun OpenLog Artemis : Geophone Logger
 The OpenLog Artemis is an open source datalogger that comes preprogrammed to automatically log IMU, GPS, serial data, and various pressure, humidity, and distance sensors. All without writing a single line of code! OLA automatically detects, configures, and logs Qwiic sensors. OLA is designed for users who just need to capture a bunch of data to SD and get back to their larger project.
 
 The firmware in this repo is dedicated to logging seismic data from the [SM-24 Geophone](https://www.sparkfun.com/products/11744)
-using the ADS122C04 ADC on the [Qwiic PT100](https://www.sparkfun.com/products/16770). [You can find the main OpenLog Artemis repo here](https://github.com/sparkfun/OpenLog_Artemis).
+using a suitable ADC. The firmware supports the ADS1015, ADS1219 and ADS122C04. You can find the main OpenLog Artemis repo [here](https://github.com/sparkfun/OpenLog_Artemis).
 
 Fast Fourier Transformed frequency and amplitude data is logged to SD card in CSV format. The CSV files can be analyzed with your favorite spreadsheet software or analysis tool.
 You can also use the Arduino IDE Serial Plotter to visualize the live FFT data.
@@ -17,11 +17,14 @@ You can also use the Arduino IDE Serial Plotter to visualize the live FFT data.
 
 OpenLog Artemis is highly configurable over an easy to use serial interface. Simply plug in a USB C cable and open a terminal at 115200kbps. The logging output is automatically streamed to both the terminal and the microSD. Pressing any key will open the configuration menu.
 
-The OpenLog Artemis automatically scans for, detects, configures, and logs data from the ADS122C04.
+The OpenLog Artemis automatically scans for, detects, configures, and logs data from the ADC.
 
 The menus will let you configure the:
 
-* ADS122C04 Gain (x1 to x128)
+* ADC Gain:
+    * ADS1015: x1 (3mV per LSB) to x24 (0.125mV per LSB)
+    * ADS1219: x1 (244.14nV per LSB) or x4 (61.04nV per LSB)
+    * ADS122C04: x1 to x128
 * Amplitude Threshold - so you only log seismic events that exceed the set threshold
 * Artemis Real Time Clock - each seismic event is date and timestamped. The RTC can be synchronized accurately to GNSS time too.
 
@@ -45,7 +48,7 @@ License Information
 
 This product is _**open source**_!
 
-Various bits of the code have different licenses applied. Anything SparkFun wrote is beerware; if you see me (or any other SparkFun employee) at the local, and you've found our code helpful, please buy us a round!
+Please see [LICENSE.md](./LICENSE.md) for full details.
 
 Please use, reuse, and modify these files as you see fit. Please maintain attribution to SparkFun Electronics and release anything derivative under the same license.
 

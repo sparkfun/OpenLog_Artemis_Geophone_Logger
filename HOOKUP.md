@@ -30,8 +30,14 @@ SparkFun OpenLog Artemis.
 
 ### Essentials:
 
-- **[OpenLog Artemis - SPX-15846](https://www.sparkfun.com/products/15846)**
-- **[Qwiic PT100 ADS122C04 - SPX-16770](https://www.sparkfun.com/products/16770)**
+- **OpenLog Artemis**
+    - **[SparkFun OpenLog Artemis - DEV-16832](https://www.sparkfun.com/products/16832)**
+    - **[SparkFun OpenLog Artemis (without IMU) - DEV-19426](https://www.sparkfun.com/products/19426)**
+    - **[SparkX OpenLog Artemis - SPX-15846](https://www.sparkfun.com/products/15846)**
+- **A suitable ADC board:**
+    - **[SparkX Qwiic 24 Bit ADC - 4 Channel (ADS1219) - SPX-23455](https://www.sparkfun.com/products/23455)**
+    - **[SparkFun Qwiic 12 Bit ADC - 4 Channel (ADS1015) - DEV-15334](https://www.sparkfun.com/products/15334)**
+    - **[Qwiic PT100 ADS122C04 - SPX-16770](https://www.sparkfun.com/products/16770)**
 - **[SM-24 Geophone - SEN-11744](https://www.sparkfun.com/products/11744)**
 - **1300Ω Resistor**
   - 1300Ω will give best performance but a [1000Ω (1KΩ) resistor](https://www.sparkfun.com/products/14492) will work too
@@ -39,13 +45,13 @@ SparkFun OpenLog Artemis.
 - **Stranded Hook-Up Wire**
   - The 22 AWG wire in our [Hook-Up Wire Assortment](https://www.sparkfun.com/products/11375) is a perfect choice
 - **Qwiic Cable**
-  - A [50mm Cable](https://www.sparkfun.com/products/14426) is all you need but our [Qwiic Cable Kit](https://www.sparkfun.com/products/15081) gives you all the options
+  - A [50mm Cable](https://www.sparkfun.com/products/17260) is all you need but our [Qwiic Cable Kit](https://www.sparkfun.com/products/15081) gives you all the options
 
 ### Extras:
 
 - **[microSD Card](https://www.sparkfun.com/products/15107)**
-- **[Lithium Ion Battery](https://www.sparkfun.com/products/13813)**
-- **[USB-C Cable](https://www.sparkfun.com/products/15092)**
+- **[Lithium Ion Battery](https://www.sparkfun.com/products/18286)**
+- **[USB-C Cable](https://www.sparkfun.com/products/15425)**
 
 ## Prepare the geophone
 
@@ -71,19 +77,28 @@ We need to solder two lengths of stranded hook-up wire to the geophone pins. Thi
 Keep the wires short. 150mm / 6" should be more than enough. After soldering the wires to the geophone pins, twist the wires together (to help minimise noise)
 and then strip the ends so they can be inserted into the latch terminals on the Qwiic PT100.
 
-## Connect the geophone to the Qwiic PT100
+## Connect the geophone to the ADC
+
+### SparkX Qwiic 24 Bit ADC - 4 Channel (ADS1219)
+
+The ADS1219 is a four channel ADC with 24-bit resolution. Connect the two wires from the geophone to AIN0 and AIN1. (The polarity does not matter, connect either wire to either terminal.)
+
+### SparkFun Qwiic 12 Bit ADC - 4 Channel (ADS1015)
+
+The ADS1015 is a four channel ADC with 12-bit resolution. Connect the two wires from the geophone to A0 and A1. (The polarity does not matter, connect either wire to either terminal.)
+
+### Qwiic PT100 ADS122C04
 
 The Qwiic PT100 is designed to measure temperature very accurately using a 100Ω Platinum Resistance Thermometer. However, the heart of the Qwiic PT100 is the ADS122C04
-24-bit analog-to-digital converter (ADC) which is perfect for digitizing the signal from the geophone. It has a differential input as well as adjustable gain (x1 to x128), which we can use to
-amplify the small signals from the geophone.
+24-bit analog-to-digital converter (ADC) which is perfect for digitizing the signal from the geophone. It has a differential input as well as adjustable gain (x1 to x128), which we can use to amplify the small signals from the geophone.
 
 Please check that the A/B/C jumpers on the back of the Qwiic PT100 are open. (They are open by default. Please clear them if you have been using the PT100 for 3-wire or 2-wire sensing.)
 
 Connect the two wires from the geophone to terminals 2 and 3 on the Qwiic PT100. (The polarity does not matter, connect either wire to either terminal.)
 
-## Connect the Qwiic PT100 to the OpenLog Artemis
+## Connect the ADC to the OpenLog Artemis
 
-Connect the Qwiic PT100 to the OLA using a Qwiic cable.
+Connect the ADC to the OLA using a Qwiic cable.
 
 ## Add the microSD card
 
@@ -120,10 +135,11 @@ The [Fast Fourier Transform](https://en.wikipedia.org/wiki/Fast_Fourier_transfor
 We actually take 1024 samples at 500Hz before we start the FFT conversion and so we get new frequency data every two seconds. The OLA logs "frequency bins" 1 to 501 which corresponds to
 0.5Hz to 250.5Hz in 0.5Hz increments.
 
-If you enable Serial Plotter mode using menu option 1 followed by menu option 3, you can use the Arduino IDE Serial Plotter tool to plot the data for you. The left of the window is 0.5Hz,
-the right is 250.5Hz. The vertical bars correspond to intervals of 50Hz. (We're fortunate that the Serial Plotter can plot 500 values at a time!) You will see fresh data scroll in every two
-seconds; the scrolling speed is baud rate dependent (it takes approximately half a second for the fresh data to scroll across at 115200 baud). The Y-axis scales automatically depending on the peak amplitude.
-It is normal to see low amplitude 'noise' displayed when there is no seismic activity.
+If you enable Serial Plotter mode using menu option 1 followed by menu option 3, you can use the Arduino IDE Serial Plotter tool to plot the data for you.
+The left of the window is 0.5Hz, the right is 250.5Hz. The vertical bars correspond to intervals of 50Hz. (We're fortunate that the Serial Plotter can plot
+500 values at a time!) You will see fresh data scroll in every two seconds; the scrolling speed is baud rate dependent (it takes approximately half a second
+for the fresh data to scroll across at 115200 baud). The Y-axis scales automatically depending on the peak amplitude. It is normal to see low amplitude 'noise'
+displayed when there is no seismic activity.
 
 If you look at the data in the files created on the microSD card, you'll see that there are 501 columns of data after the date and time. The 501st column contains the peak frequency signal in Hz.
 

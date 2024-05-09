@@ -13,9 +13,9 @@
 
 volatile static bool g_bGeophoneDataReady = false;
 volatile static bool g_bUsingGeophoneBuffer1 = true;
-volatile static uint32_t g_ui16GeophoneDataBufferPointer = 0;
-volatile static int16_t g_ui32GeophoneDataBuffer1[GEOPHONE_FFT_SIZE];
-volatile static int16_t g_ui32GeophoneDataBuffer2[GEOPHONE_FFT_SIZE];
+volatile static uint32_t g_ui32GeophoneDataBufferPointer = 0;
+volatile static int32_t g_ui32GeophoneDataBuffer1[GEOPHONE_FFT_SIZE];
+volatile static int32_t g_ui32GeophoneDataBuffer2[GEOPHONE_FFT_SIZE];
 float g_fGeophoneTimeDomain[GEOPHONE_FFT_SIZE * 2];
 float g_fGeophoneFrequencyDomain[GEOPHONE_FFT_SIZE * 2];
 float g_fGeophoneMagnitudes[GEOPHONE_FFT_SIZE * 2];
@@ -50,9 +50,15 @@ void geophone_setup()
 
   g_bGeophoneDataReady = false; // Clear the flag
   g_bUsingGeophoneBuffer1 = true; // Use buffer 1
-  g_ui16GeophoneDataBufferPointer = 0; // Reset the pointer
+  g_ui32GeophoneDataBufferPointer = 0; // Reset the pointer
 
-  stimer_init(); // Now start the timer
+  //stimer_init(); // Now start the timer
+
+  cancel_handle_sample = the_event_queue.call_every(SAMPLE_INTERVAL, &sampling_interrupt); // Call sampling_interrupt every 2ms (500Hz)
+
+  cancel_handle_loop = the_event_queue.call_every(LOOP_INTERVAL, &mainLoop); // Call mainLoop every 250ms
+
+  the_event_queue.dispatch();
 }
 
 /*
@@ -65,35 +71,40 @@ void geophone_setup()
  * While not a sampling task, we take advantage of the timer interrupt to
  * blink the report LED if enabled.
  */
-void sampling_interrupt( )
+void sampling_interrupt()
 {
+  if (samplingEnabled == false)
+    return;
+
+  digitalWrite(PIN_LOGIC_DEBUG, !digitalRead(PIN_LOGIC_DEBUG));
+
   /* Read a sample and store it in the geodata buffer.  Apply a Hamming
      window as we go along.  It involves a cos operation; the alternative
      is an array that should be fit into program memory. */
 
   /* Read the geodata sample from the ADS122C04. */
 #if defined(TEST_PERIOD_1) && defined(TEST_AMPLITUDE_1) && defined(TEST_PERIOD_2) && defined(TEST_AMPLITUDE_2) // If TEST_PERIOD 1+2 are defined then fake the data
-  int16_t geodata_sample = (int16_t)((TEST_AMPLITUDE_1 * sin(2.0 * M_PI * ((double)(micros() % TEST_PERIOD_1)) / ((double)TEST_PERIOD_1)))
+  int32_t geodata_sample = (int32_t)((TEST_AMPLITUDE_1 * sin(2.0 * M_PI * ((double)(micros() % TEST_PERIOD_1)) / ((double)TEST_PERIOD_1)))
     + (TEST_AMPLITUDE_2 * cos(2.0 * M_PI * ((double)(micros() % TEST_PERIOD_2)) / ((double)TEST_PERIOD_2))));
 #elif (defined(TEST_PERIOD_1) && defined(TEST_AMPLITUDE_1)) // If TEST_PERIOD 1 is defined then fake the data
-  int16_t geodata_sample = TEST_AMPLITUDE_1 * sin(2.0 * M_PI * ((double)(micros() % TEST_PERIOD_1)) / ((double)TEST_PERIOD_1));
+  int32_t geodata_sample = TEST_AMPLITUDE_1 * sin(2.0 * M_PI * ((double)(micros() % TEST_PERIOD_1)) / ((double)TEST_PERIOD_1));
 #else  
-  int16_t geodata_sample = gatherADCValue(); // Take a real sample from the ADC
+  int32_t geodata_sample = gatherADCValue(); // Take a real sample from the ADC
 #endif
 
   if (g_bUsingGeophoneBuffer1) // Write the geophone sample into the appropriate buffer
   {
-    g_ui32GeophoneDataBuffer1[g_ui16GeophoneDataBufferPointer] = geodata_sample;
+    g_ui32GeophoneDataBuffer1[g_ui32GeophoneDataBufferPointer] = geodata_sample;
   }
   else
   {
-    g_ui32GeophoneDataBuffer2[g_ui16GeophoneDataBufferPointer] = geodata_sample;
+    g_ui32GeophoneDataBuffer2[g_ui32GeophoneDataBufferPointer] = geodata_sample;
   }
-  g_ui16GeophoneDataBufferPointer++; // Increment the pointer
-  if (g_ui16GeophoneDataBufferPointer == GEOPHONE_FFT_SIZE) // Have we reached the end of the buffer?
+  g_ui32GeophoneDataBufferPointer++; // Increment the pointer
+  if (g_ui32GeophoneDataBufferPointer == GEOPHONE_FFT_SIZE) // Have we reached the end of the buffer?
   {
     g_bUsingGeophoneBuffer1 ^= 1; // Swap to the other buffer
-    g_ui16GeophoneDataBufferPointer = 0; // Reset the pointer
+    g_ui32GeophoneDataBufferPointer = 0; // Reset the pointer
     g_bGeophoneDataReady = true; // Set the flag
   }
 }
@@ -110,7 +121,7 @@ bool geophone_loop()
   {
     float fMaxValue;
     uint32_t ui32MaxIndex;
-    int16_t *pi16GeophoneData;
+    int32_t *pi32GeophoneData;
     uint32_t ui32LoudestFrequency;
 
     geophoneData[0] = '\0'; //Clear string contents
@@ -122,11 +133,11 @@ bool geophone_loop()
     
     if (g_bUsingGeophoneBuffer1)
     {
-      pi16GeophoneData = (int16_t *) g_ui32GeophoneDataBuffer2; // Point to the full buffer
+      pi32GeophoneData = (int32_t *) g_ui32GeophoneDataBuffer2; // Point to the full buffer
     }
     else
     {
-      pi16GeophoneData = (int16_t *) g_ui32GeophoneDataBuffer1; // Point to the full buffer
+      pi32GeophoneData = (int32_t *) g_ui32GeophoneDataBuffer1; // Point to the full buffer
     }
       
     //
@@ -135,7 +146,7 @@ bool geophone_loop()
     //
     for (uint32_t i = 0; i < GEOPHONE_FFT_SIZE; i++)
     {
-      g_fGeophoneTimeDomain[2 * i] = pi16GeophoneData[i] / 1.0;
+      g_fGeophoneTimeDomain[2 * i] = pi32GeophoneData[i] / 1.0;
       g_fGeophoneTimeDomain[2 * i + 1] = 0.0;
     }
 

@@ -38,8 +38,8 @@ void getDateTime()
   }
 }
 
-//Read the ADC value as int16_t (2 bytes -32,768 to 32,767)
-int16_t gatherADCValue()
+//Read the ADC value
+int32_t gatherADCValue()
 {
   node *temp = head;
   while (temp != NULL)
@@ -47,14 +47,12 @@ int16_t gatherADCValue()
     //If this node successfully begin()'d
     if (temp->online == true)
     {
-      openConnection(temp->muxAddress, temp->portNumber); //Connect to this device through muxes as needed
-
       //Switch on device type to set proper class and setting struct
       switch (temp->deviceType)
       {
         case DEVICE_GPS_UBLOX:
           {
-            //SFE_UBLOX_GPS *nodeDevice = (SFE_UBLOX_GPS *)temp->classPtr;
+            //SFE_UBLOX_GNSS *nodeDevice = (SFE_UBLOX_GNSS *)temp->classPtr;
             //struct_uBlox *nodeSetting = (struct_uBlox *)temp->configPtr;
           }
           break;
@@ -75,7 +73,29 @@ int16_t gatherADCValue()
             uint32_t raw_ADC_data = nodeDevice->readADC();
             nodeDevice->start(); // Start the next conversion
             ADC_conversion.UINT16 = (raw_ADC_data >> 8) & 0xffff; // Truncate to 16-bits (signed)
-            return(ADC_conversion.INT16); // Return the signed version
+            return((int32_t)ADC_conversion.INT16); // Return the signed version
+          }
+          break;
+        case DEVICE_ADC_ADS1015:
+          {
+            ADS1015 *nodeDevice = (ADS1015 *)temp->classPtr;
+            struct_ADS1015 *nodeSetting = (struct_ADS1015 *)temp->configPtr;
+    
+            return((int32_t)nodeDevice->getDifferential());
+          }
+          break;
+        case DEVICE_ADC_ADS1219:
+          {
+            SfeADS1219ArdI2C *nodeDevice = (SfeADS1219ArdI2C *)temp->classPtr;
+            struct_ADS122C04 *nodeSetting = (struct_ADS122C04 *)temp->configPtr;
+    
+            while (nodeDevice->dataReady() == false) // Check if the conversion is complete. This will return true if data is ready.
+            {
+              delay(1); // The conversion is not complete. Wait a little to avoid pounding the I2C bus.
+            }
+
+            nodeDevice->readConversion(); // Read the conversion result from the ADC. Store it internally.
+            return(nodeDevice->getConversionRaw());
           }
           break;
         default:
@@ -97,14 +117,12 @@ void configureADC()
     //If this node successfully begin()'d
     if (temp->online == true)
     {
-      openConnection(temp->muxAddress, temp->portNumber); //Connect to this device through muxes as needed
-
       //Switch on device type to set proper class and setting struct
       switch (temp->deviceType)
       {
         case DEVICE_GPS_UBLOX:
           {
-            //SFE_UBLOX_GPS *nodeDevice = (SFE_UBLOX_GPS *)temp->classPtr;
+            //SFE_UBLOX_GNSS *nodeDevice = (SFE_UBLOX_GNSS *)temp->classPtr;
             //struct_uBlox *nodeSetting = (struct_uBlox *)temp->configPtr;
           }
           break;
@@ -114,37 +132,38 @@ void configureADC()
             struct_ADS122C04 *nodeSetting = (struct_ADS122C04 *)temp->configPtr;
     
             nodeDevice->setInputMultiplexer(ADS122C04_MUX_AIN1_AIN0); // Route AIN1 and AIN0 to AINP and AINN
-            if (settings.geophoneGain == 128)
+
+            if (nodeSetting->gain == ADS122C04_GAIN_128)
             {
               nodeDevice->setGain(ADS122C04_GAIN_128); // Set the gain to 128
               nodeDevice->enablePGA(ADS122C04_PGA_ENABLED); // Enable the Programmable Gain Amplifier
             }
-            else if (settings.geophoneGain == 64)
+            else if (nodeSetting->gain == ADS122C04_GAIN_64)
             {
               nodeDevice->setGain(ADS122C04_GAIN_64); // Set the gain to 64
               nodeDevice->enablePGA(ADS122C04_PGA_ENABLED); // Enable the Programmable Gain Amplifier
             }
-            else if (settings.geophoneGain == 32)
+            else if (nodeSetting->gain == ADS122C04_GAIN_32)
             {
               nodeDevice->setGain(ADS122C04_GAIN_32); // Set the gain to 32
               nodeDevice->enablePGA(ADS122C04_PGA_ENABLED); // Enable the Programmable Gain Amplifier
             }
-            else if (settings.geophoneGain == 16)
+            else if (nodeSetting->gain == ADS122C04_GAIN_16)
             {
               nodeDevice->setGain(ADS122C04_GAIN_16); // Set the gain to 16
               nodeDevice->enablePGA(ADS122C04_PGA_ENABLED); // Enable the Programmable Gain Amplifier
             }
-            else if (settings.geophoneGain == 8)
+            else if (nodeSetting->gain == ADS122C04_GAIN_8)
             {
               nodeDevice->setGain(ADS122C04_GAIN_8); // Set the gain to 8
               nodeDevice->enablePGA(ADS122C04_PGA_ENABLED); // Enable the Programmable Gain Amplifier
             }
-            else if (settings.geophoneGain == 4)
+            else if (nodeSetting->gain == ADS122C04_GAIN_4)
             {
               nodeDevice->setGain(ADS122C04_GAIN_4); // Set the gain to 4
               nodeDevice->enablePGA(ADS122C04_PGA_DISABLED); // Disable the Programmable Gain Amplifier
             }
-            else if (settings.geophoneGain == 2)
+            else if (nodeSetting->gain == ADS122C04_GAIN_2)
             {
               nodeDevice->setGain(ADS122C04_GAIN_2); // Set the gain to 2
               nodeDevice->enablePGA(ADS122C04_PGA_DISABLED); // Disable the Programmable Gain Amplifier
@@ -154,6 +173,7 @@ void configureADC()
               nodeDevice->setGain(ADS122C04_GAIN_1); // Set the gain to 1
               nodeDevice->enablePGA(ADS122C04_PGA_DISABLED); // Disable the Programmable Gain Amplifier
             }
+
             nodeDevice->setDataRate(ADS122C04_DATA_RATE_600SPS); // Set the data rate (samples per second) to 600
             nodeDevice->setOperatingMode(ADS122C04_OP_MODE_NORMAL); // Disable turbo mode
             nodeDevice->setConversionMode(ADS122C04_CONVERSION_MODE_SINGLE_SHOT); // Use single shot mode
@@ -174,6 +194,61 @@ void configureADC()
             }
     
             nodeDevice->start(); // Start the first conversion
+          }
+          break;
+        case DEVICE_ADC_ADS1015:
+          {
+            ADS1015 *nodeDevice = (ADS1015 *)temp->classPtr;
+            struct_ADS1015 *nodeSetting = (struct_ADS1015 *)temp->configPtr;
+
+            if (nodeSetting->gain == ADS1015_CONFIG_PGA_TWOTHIRDS)
+            {
+              nodeDevice->setGain(ADS1015_CONFIG_PGA_TWOTHIRDS); // Set the gain to 2/3
+            }
+            else if (nodeSetting->gain == ADS1015_CONFIG_PGA_1)
+            {
+              nodeDevice->setGain(ADS1015_CONFIG_PGA_1); // Set the gain to 1
+            }
+            else if (nodeSetting->gain == ADS1015_CONFIG_PGA_2)
+            {
+              nodeDevice->setGain(ADS1015_CONFIG_PGA_2); // Set the gain to 2
+            }
+            else if (nodeSetting->gain == ADS1015_CONFIG_PGA_4)
+            {
+              nodeDevice->setGain(ADS1015_CONFIG_PGA_4); // Set the gain to 4
+            }
+            else if (nodeSetting->gain == ADS1015_CONFIG_PGA_8)
+            {
+              nodeDevice->setGain(ADS1015_CONFIG_PGA_8); // Set the gain to 8
+            }
+            else
+            {
+              nodeDevice->setGain(ADS1015_CONFIG_PGA_16); // Set the gain to 16
+            }
+
+            nodeDevice->setSampleRate(ADS1015_CONFIG_RATE_920HZ); // 490Hz isn't fast enough - use 920Hz
+            nodeDevice->useConversionReady(true); // Check the Config Register Operational Status bit
+            // Use single shot conversions    
+          }
+          break;
+        case DEVICE_ADC_ADS1219:
+          {
+            SfeADS1219ArdI2C *nodeDevice = (SfeADS1219ArdI2C *)temp->classPtr;
+            struct_ADS1219 *nodeSetting = (struct_ADS1219 *)temp->configPtr;
+    
+            if (nodeSetting->gain == ADS1219_GAIN_1)
+            {
+              nodeDevice->setGain(ADS1219_GAIN_1); // Set the gain to 1
+            }
+            else
+            {
+              nodeDevice->setGain(ADS1219_GAIN_4); // Set the gain to 4
+            }
+
+            nodeDevice->setDataRate(ADS1219_DATA_RATE_1000SPS);
+            nodeDevice->setInputMultiplexer(ADS1219_CONFIG_MUX_DIFF_P0_N1);
+            nodeDevice->setConversionMode(ADS1219_CONVERSION_SINGLE_SHOT);
+            nodeDevice->startSync(); // Start the first conversion
           }
           break;
         default:

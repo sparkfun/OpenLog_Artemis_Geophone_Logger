@@ -94,7 +94,7 @@ void menuTimeStamp()
         int dd = myRTC.dayOfMonth, mm = myRTC.month, yy = myRTC.year, h = myRTC.hour, m = myRTC.minute, s = myRTC.seconds, ms = (myRTC.hundredths * 10);
         bool dateValid, timeValid;
         getGPSDateTime(yy, mm, dd, h, m, s, ms, dateValid, timeValid); // Get the GPS date and time, corrected for localUTCOffset
-        myRTC.setTime(h, m, s, (ms / 10), dd, mm, (yy - 2000)); //Manually set RTC
+        myRTC.setTime((ms / 10), s, m, h, dd, mm, (yy - 2000)); //Manually set RTC
         lastSDFileNameChangeTime = rtcMillis(); // Record the time of the file name change
         Serial.println("RTC set to GPS (UTC) time");
         if ((dateValid == false) || (timeValid == false))
@@ -105,7 +105,7 @@ void menuTimeStamp()
       else if (incoming == 9)
       {
         Serial.print("Enter the local hour offset from UTC (-12 to 14): ");
-        int offset = getNumber(menuTimeout); //Timeout after x seconds
+        float offset = (float)getDouble(menuTimeout); //Timeout after x seconds
         if (offset < -12 || offset > 14)
           Serial.println("Error: Offset is out of range");
         else
@@ -131,7 +131,9 @@ void menuTimeStamp()
         Serial.print("Enter current day (1 to 31): ");
         dd = getNumber(menuTimeout); //Timeout after x seconds
 
-        myRTC.setTime(h, m, s, 0, dd, mm, yy); //Manually set RTC
+        myRTC.getTime();
+        h = myRTC.hour; m = myRTC.minute; s = myRTC.seconds;
+        myRTC.setTime(0, s, m, h, dd, mm, yy); //Manually set RTC
         lastSDFileNameChangeTime = rtcMillis(); // Record the time of the file name change
       }
       else if (incoming == 5)
@@ -157,7 +159,7 @@ void menuTimeStamp()
         Serial.print("Enter current second (0 to 59): ");
         s = getNumber(menuTimeout); //Timeout after x seconds
 
-        myRTC.setTime(h, m, s, 0, dd, mm, yy); //Manually set RTC
+        myRTC.setTime(0, s, m, h, dd, mm, yy); //Manually set RTC
         lastSDFileNameChangeTime = rtcMillis(); // Record the time of the file name change
       }
       else if (incoming == 7)
