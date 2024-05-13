@@ -403,7 +403,7 @@ deviceType_e testDevice(uint8_t i2cAddress)
         //Confidence: Medium - reads Configuration Register
         SfeADS1219ArdI2C sensor;
         if (sensor.begin(qwiic, i2cAddress) == true) //Wire port, Address
-          return (DEVICE_ADC_ADS122C04);
+          return (DEVICE_ADC_ADS1219);
       }
       break;
     case 0x42:

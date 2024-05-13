@@ -22,7 +22,7 @@
 
   The RTC can be set by a u-blox GNSS module.
 
-  Based on v14 of:
+  Based on v2.8 of:
   OpenLog Artemis
   By: Nathan Seidle
   SparkFun Electronics
@@ -170,13 +170,11 @@ uint64_t qwiicPowerOnTime = 0; //Used to delay after Qwiic power on to allow sen
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 //Geophone settings
-#define TEST_PERIOD_1 20000 // Uncomment to enable sinusoidal test signal (period in micros) (20000 = 50Hz)
-#define TEST_AMPLITUDE_1 100 // Amplitude of the sinusoidal test signal
-#define TEST_PERIOD_2 30303 // Uncomment to enable second (mixed) cosinusoidal test signal (period in micros) (30303 = 33Hz)
-#define TEST_AMPLITUDE_2 50 // Amplitude of the sinusoidal test signal
+//#define TEST_PERIOD_1 20000 // Uncomment to enable sinusoidal test signal (period in micros) (20000 = 50Hz)
+//#define TEST_AMPLITUDE_1 100 // Amplitude of the sinusoidal test signal
+//#define TEST_PERIOD_2 30303 // Uncomment to enable second (mixed) cosinusoidal test signal (period in micros) (30303 = 33Hz)
+//#define TEST_AMPLITUDE_2 50 // Amplitude of the sinusoidal test signal
 //#define SAMPLE_INTERVAL 6000 // Interval for 500Hz with a 3MHz clock
-
-#define DUMP(varname) {if (settings.serialPlotterMode == false) Serial.printf("%s: %llu\n", #varname, varname)}
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -212,15 +210,19 @@ void stopWatchdog()
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-// Use an EventQueue to control the ADC samples
-#include "mbed_events.h"
+// Use Thread and EventQueue to control the ADC samples
+#include "mbed.h"
 #include <stdio.h>
 
-events::EventQueue the_event_queue;
+rtos::Thread sample_thread;
+events::EventQueue sample_event_queue;
 
 int cancel_handle_sample = 0;
 //static const std::chrono::milliseconds SAMPLE_INTERVAL = 2ms;
 static const uint32_t SAMPLE_INTERVAL = 2;
+
+rtos::Thread loop_thread;
+events::EventQueue loop_event_queue;
 
 int cancel_handle_loop = 0;
 //static const std::chrono::milliseconds LOOP_INTERVAL = 250ms;
@@ -318,8 +320,6 @@ void setup() {
   else
     if (settings.serialPlotterMode == false) Serial.println("No Qwiic devices detected");
 
-  //Serial.printf("Setup time: %.02f ms\n", (micros() - startTime) / 1000.0);
-
   //Print the helper text
   if ((settings.enableTerminalOutput == true)  && (settings.serialPlotterMode == false))
   {
@@ -332,15 +332,46 @@ void setup() {
 
   digitalWrite(PIN_STAT_LED, LOW); // Turn the STAT LED off now that everything is configured
 
-  geophone_setup(); // Set up the ADC and get ready to start the events
+  geophone_setup(); // Set up the ADC
+
+  loop_thread.start(&startMainLoop);
+
+  loop_thread.set_priority(osPriorityNormal1); // Increase loop_thread priority above the actual loop()
+
+  sample_thread.start(&startSamples);
+
+  sample_thread.set_priority(osPriorityNormal2); // Increase sample_thread priority so it can interrupt loop_thread
 }
 
 void loop()
 {
+  yield(); // Nothing to do here...
+}
+
+void startSamples()
+{
+  cancel_handle_sample = sample_event_queue.call_every(SAMPLE_INTERVAL, &sampling_interrupt); // Call sampling_interrupt every 2ms (500Hz)
+
+  sample_event_queue.dispatch();
+
+  while (1)
+    yield();
+}
+
+void startMainLoop()
+{
+  cancel_handle_loop = loop_event_queue.call_every(LOOP_INTERVAL, &mainLoop); // Call mainLoop every 250ms
+
+  loop_event_queue.dispatch();
+
+  while (1)
+    yield();
 }
 
 void mainLoop()
 {
+  digitalWrite(PIN_LOGIC_DEBUG, !digitalRead(PIN_LOGIC_DEBUG));
+
   if (Serial.available()) // Check if the user pressed a key
   {
     samplingEnabled = false; // Disable sampling while menu is open

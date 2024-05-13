@@ -53,12 +53,6 @@ void geophone_setup()
   g_ui32GeophoneDataBufferPointer = 0; // Reset the pointer
 
   //stimer_init(); // Now start the timer
-
-  cancel_handle_sample = the_event_queue.call_every(SAMPLE_INTERVAL, &sampling_interrupt); // Call sampling_interrupt every 2ms (500Hz)
-
-  cancel_handle_loop = the_event_queue.call_every(LOOP_INTERVAL, &mainLoop); // Call mainLoop every 250ms
-
-  the_event_queue.dispatch();
 }
 
 /*
@@ -169,9 +163,11 @@ bool geophone_loop()
     {
       for (uint32_t i = 1; i < FREQ_LIMIT; i++)
       {
-        sprintf(tempData, "%.2f,", g_fGeophoneMagnitudes[i]);
+        char tempStr[16];
+        olaftoa(g_fGeophoneMagnitudes[i], tempStr, 2, sizeof(tempStr) / sizeof(char));
+        sprintf(tempData, "%s,", tempStr);
         strcat(geophoneData, tempData);
-        sprintf(tempData, "%.2f\n", g_fGeophoneMagnitudes[i]);
+        sprintf(tempData, "%s\n", tempStr);
         strcat(geophoneDataSerial, tempData);
       }
   
@@ -179,7 +175,9 @@ bool geophone_loop()
       strcat(geophoneData, tempData);
       strcat(peakFreq, tempData);
 
-      sprintf(tempData, ",%.2f", fMaxValue);
+      char tempStr[16];
+      olaftoa(fMaxValue, tempStr, 2, sizeof(tempStr) / sizeof(char));
+      sprintf(tempData, ",%s", tempStr);
       strcat(peakFreq, tempData);
       
       if (settings.printMeasurementCount)

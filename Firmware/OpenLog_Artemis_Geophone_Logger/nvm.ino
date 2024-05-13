@@ -87,7 +87,7 @@ void recordSystemSettingsToFile()
     settingsFile.println("americanDateStyle=" + (String)settings.americanDateStyle);
     settingsFile.println("hour24Style=" + (String)settings.hour24Style);
     settingsFile.println("serialTerminalBaudRate=" + (String)settings.serialTerminalBaudRate);
-    settingsFile.println("localUTCOffset=" + (String)settings.localUTCOffset);
+    settingsFile.print("localUTCOffset="); settingsFile.println(settings.localUTCOffset);
     settingsFile.println("printDebugMessages=" + (String)settings.printDebugMessages);
     settingsFile.println("powerDownQwiicBusBetweenReads=" + (String)settings.powerDownQwiicBusBetweenReads);
     settingsFile.println("qwiicBusMaxSpeed=" + (String)settings.qwiicBusMaxSpeed);

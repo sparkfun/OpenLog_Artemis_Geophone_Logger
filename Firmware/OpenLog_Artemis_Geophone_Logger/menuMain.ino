@@ -12,7 +12,6 @@ void menuMain()
 
     Serial.println("2) Configure Time Stamp");
 
-    //Serial.println("3) Detect / Configure Attached Devices");
     Serial.println("3) Configure Qwiic Settings");
 
     Serial.println("4) Configure Geophone Threshold");

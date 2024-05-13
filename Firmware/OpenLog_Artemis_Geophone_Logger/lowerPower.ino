@@ -65,8 +65,8 @@ void powerDownOLA(void)
   detachInterrupt(PIN_POWER_LOSS);
 #endif
 
-  the_event_queue.cancel(cancel_handle_sample); // Stop the ADC task
-  the_event_queue.cancel(cancel_handle_loop); // Stop the loop task
+  sample_event_queue.cancel(cancel_handle_sample); // Stop the ADC task
+  loop_event_queue.cancel(cancel_handle_loop); // Stop the loop task
 
   //Prevent stop logging button from waking us from sleep
   if (settings.useGPIO32ForStopLogging == true)
@@ -167,8 +167,8 @@ void resetArtemis(void)
 
   delay(sdPowerDownDelay); // Give the SD card time to finish writing ***** THIS IS CRITICAL *****
 
-  the_event_queue.cancel(cancel_handle_sample); // Stop the ADC task
-  the_event_queue.cancel(cancel_handle_loop); // Stop the loop task
+  sample_event_queue.cancel(cancel_handle_sample); // Stop the ADC task
+  loop_event_queue.cancel(cancel_handle_loop); // Stop the loop task
 
   Serial.flush(); //Finish any prints
 

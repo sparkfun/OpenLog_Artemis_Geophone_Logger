@@ -112,13 +112,11 @@ void menuAttachedDevices()
     }
 
     availableDevices++;
-    Serial.printf("%d) Configure Qwiic Settings\r\n", availableDevices);
-    availableDevices++;
 
     Serial.println(F("x) Exit"));
 
     int nodeNumber = getNumber(menuTimeout); //Timeout after x seconds
-    if (nodeNumber > 0 && nodeNumber < availableDevices - 1)
+    if (nodeNumber > 0 && nodeNumber < availableDevices)
     {
       //Lookup the function we need to call based the node number
       FunctionPointer functionPointer = getConfigFunctionPtr(nodeNumber - 1);
@@ -128,10 +126,6 @@ void menuAttachedDevices()
       functionPointer(deviceConfigPtr); //Call the appropriate config menu with a pointer to this node's configPtr
 
       configureDevice(nodeNumber - 1); //Reconfigure this device with the new settings
-    }
-    else if (nodeNumber == availableDevices - 1)
-    {
-      menuConfigure_QwiicBus();
     }
     else if (nodeNumber == STATUS_PRESSED_X)
       break;

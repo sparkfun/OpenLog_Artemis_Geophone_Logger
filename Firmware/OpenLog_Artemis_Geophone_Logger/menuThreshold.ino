@@ -6,7 +6,9 @@ void menuThreshold()
     Serial.println("Menu: Configure Geophone Threshold");
 
     Serial.print("1) Threshold: ");
-    Serial.printf("%f\n", settings.threshold);
+    char tempStr[16];
+    olaftoa(settings.threshold, tempStr, 3, sizeof(tempStr) / sizeof(char));
+    Serial.printf("%s\n", tempStr);
 
     Serial.println("x) Exit");
 
