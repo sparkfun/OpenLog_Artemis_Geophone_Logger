@@ -50,6 +50,8 @@ const int FIRMWARE_VERSION_MINOR = 0;
 //    the minor firmware version
 #define OLA_IDENTIFIER 0x320
 
+//#define noPowerLossProtection // Uncomment this line to disable the sleep-on-power-loss functionality
+
 //Define the pin functions
 //Depends on hardware version. This can be found as a marking on the PCB.
 //x04 was the SparkX 'black' version.
