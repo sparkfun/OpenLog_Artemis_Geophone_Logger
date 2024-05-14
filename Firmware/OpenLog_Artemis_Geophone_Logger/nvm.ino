@@ -137,10 +137,10 @@ bool loadSystemSettingsFromFile()
       while (settingsFile.available()) {
         int n = settingsFile.fgets(line, sizeof(line));
         if (n <= 0) {
-          if (settings.serialPlotterMode == false) Serial.printf("Failed to read line %d from settings file\n", lineNumber);
+          if (settings.serialPlotterMode == false) Serial.printf("Failed to read line %d from settings file\r\n", lineNumber);
         }
         else if (line[n - 1] != '\n' && n == (sizeof(line) - 1)) {
-          if (settings.serialPlotterMode == false) Serial.printf("Settings line %d too long\n", lineNumber);
+          if (settings.serialPlotterMode == false) Serial.printf("Settings line %d too long\r\n", lineNumber);
           if (lineNumber == 0)
           {
             //If we can't read the first line of the settings file, give up
@@ -149,7 +149,7 @@ bool loadSystemSettingsFromFile()
           }
         }
         else if (parseLine(line) == false) {
-          if (settings.serialPlotterMode == false) Serial.printf("Failed to parse line %d: %s\n", lineNumber, line);
+          if (settings.serialPlotterMode == false) Serial.printf("Failed to parse line %d: %s\r\n", lineNumber, line);
           if (lineNumber == 0)
           {
             //If we can't read the first line of the settings file, give up
@@ -204,7 +204,7 @@ bool parseLine(char* str) {
   str = strtok(nullptr, "\n");
   if (!str) return false;
 
-  //Serial.printf("s = %s\n", str);
+  //Serial.printf("s = %s\r\n", str);
   //Serial.flush();
 
   // Convert string to double.
@@ -212,7 +212,7 @@ bool parseLine(char* str) {
 
   if (str == ptr || *skipSpace(ptr)) return false;
 
-  //Serial.printf("d = %lf\n", d);
+  //Serial.printf("d = %lf\r\n", d);
   //Serial.flush();
 
   // Get setting name
@@ -230,7 +230,7 @@ bool parseLine(char* str) {
 
     //Check to see if this setting file is compatible with this version of OLA
     if (d != sizeof(settings))
-      Serial.printf("Warning: Settings size is %d but current firmware expects %d. Attempting to use settings from file.\n", d, sizeof(settings));
+      Serial.printf("Warning: Settings size is %d but current firmware expects %d. Attempting to use settings from file.\r\n", d, sizeof(settings));
 
   }
   else if (strcmp(settingName, "olaIdentifier") == 0)
@@ -286,7 +286,7 @@ bool parseLine(char* str) {
   else if (strcmp(settingName, "lowBatteryThreshold") == 0)
     settings.lowBatteryThreshold = d;
   else
-    Serial.printf("Unknown setting %s on line: %s\n", settingName, str);
+    Serial.printf("Unknown setting %s on line: %s\r\n", settingName, str);
 
   return (true);
 }
@@ -364,7 +364,7 @@ void recordDeviceSettingsToFile()
           }
           break;
         default:
-          if (settings.serialPlotterMode == false) Serial.printf("recordSettingsToFile Unknown device: %s\n", base);
+          if (settings.serialPlotterMode == false) Serial.printf("recordSettingsToFile Unknown device: %s\r\n", base);
           //settingsFile.println((String)base + "=UnknownDeviceSettings");
           break;
       }
@@ -406,13 +406,13 @@ bool loadDeviceSettingsFromFile()
       while (settingsFile.available()) {
         int n = settingsFile.fgets(line, sizeof(line));
         if (n <= 0) {
-          if (settings.serialPlotterMode == false) Serial.printf("Failed to read line %d from settings file\n", lineNumber);
+          if (settings.serialPlotterMode == false) Serial.printf("Failed to read line %d from settings file\r\n", lineNumber);
         }
         else if (line[n - 1] != '\n' && n == (sizeof(line) - 1)) {
-          if (settings.serialPlotterMode == false) Serial.printf("Settings line %d too long\n", lineNumber);
+          if (settings.serialPlotterMode == false) Serial.printf("Settings line %d too long\r\n", lineNumber);
         }
         else if (parseDeviceLine(line) == false) {
-          if (settings.serialPlotterMode == false) Serial.printf("Failed to parse line %d: %s\n", lineNumber + 1, line);
+          if (settings.serialPlotterMode == false) Serial.printf("Failed to parse line %d: %s\r\n", lineNumber + 1, line);
         }
 
         lineNumber++;
@@ -455,14 +455,14 @@ bool parseDeviceLine(char* str) {
   str = strtok(nullptr, "\n");
   if (!str) return false;
 
-  //Serial.printf("s = %s\n", str);
+  //Serial.printf("s = %s\r\n", str);
   //Serial.flush();
 
   // Convert string to double.
   double d = strtod(str, &ptr);
   if (str == ptr || *skipSpace(ptr)) return false;
 
-  //Serial.printf("d = %lf\n", d);
+  //Serial.printf("d = %lf\r\n", d);
   //Serial.flush();
 
   //Break device setting into its constituent parts
@@ -487,7 +487,7 @@ bool parseDeviceLine(char* str) {
 
   if (count < 3)
   {
-    if (settings.serialPlotterMode == false) Serial.printf("Incomplete setting: %s\n", settingName);
+    if (settings.serialPlotterMode == false) Serial.printf("Incomplete setting: %s\r\n", settingName);
     return false;
   }
 
@@ -495,7 +495,7 @@ bool parseDeviceLine(char* str) {
   void *deviceConfigPtr = getConfigPointer(deviceType, address);
   if (deviceConfigPtr == NULL)
   {
-    //Serial.printf("Setting in file found but no matching device on bus is available: %s\n", settingName);
+    //Serial.printf("Setting in file found but no matching device on bus is available: %s\r\n", settingName);
     //Serial.flush();
   }
   else
@@ -541,7 +541,7 @@ bool parseDeviceLine(char* str) {
           else if (strcmp(deviceSettingName, "i2cSpeed") == 0)
             nodeSetting->i2cSpeed = d;
           else
-            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\n", deviceSettingName);
+            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\r\n", deviceSettingName);
         }
         break;
       case DEVICE_ADC_ADS122C04:
@@ -552,7 +552,7 @@ bool parseDeviceLine(char* str) {
           else if (strcmp(deviceSettingName, "gain") == 0)
             nodeSetting->gain = d;
           else
-            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\n", deviceSettingName);
+            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\r\n", deviceSettingName);
         }
         break;
       case DEVICE_ADC_ADS1015:
@@ -563,7 +563,7 @@ bool parseDeviceLine(char* str) {
           else if (strcmp(deviceSettingName, "gain") == 0)
             nodeSetting->gain = d;
           else
-            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\n", deviceSettingName);
+            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\r\n", deviceSettingName);
         }
         break;
       case DEVICE_ADC_ADS1219:
@@ -574,11 +574,11 @@ bool parseDeviceLine(char* str) {
           else if (strcmp(deviceSettingName, "gain") == 0)
             nodeSetting->gain = (ads1219_gain_config_t)d;
           else
-            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\n", deviceSettingName);
+            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\r\n", deviceSettingName);
         }
         break;
       default:
-        if (settings.serialPlotterMode == false) Serial.printf("Unknown device type: %d\n", deviceType);
+        if (settings.serialPlotterMode == false) Serial.printf("Unknown device type: %d\r\n", deviceType);
         Serial.flush();
         break;
     }

@@ -8,7 +8,7 @@ void menuThreshold()
     Serial.print("1) Threshold: ");
     char tempStr[16];
     olaftoa(settings.threshold, tempStr, 3, sizeof(tempStr) / sizeof(char));
-    Serial.printf("%s\n", tempStr);
+    Serial.printf("%s\r\n", tempStr);
 
     Serial.println("x) Exit");
 
@@ -24,10 +24,7 @@ void menuThreshold()
         settings.threshold = tempThreshold;
     }
     else if (incoming == STATUS_PRESSED_X)
-    {
-      configureADC(); // Reconfigure ADC
       return;
-    }
     else if (incoming == STATUS_GETNUMBER_TIMEOUT)
       return;
     else

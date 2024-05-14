@@ -22,39 +22,6 @@ float g_fGeophoneMagnitudes[GEOPHONE_FFT_SIZE * 2];
 uint32_t g_ui32SampleFreq = 500;  // We'll need to set the ADS122C04 to 600Hz.
 
 
-// Functions taken from stimer.c
-void stimer_init(void)
-{
-  //
-  // Enable compare F interrupt in STIMER
-  //
-  am_hal_stimer_int_enable(AM_HAL_STIMER_INT_COMPAREF);
-
-  //
-  // Enable the timer interrupt in the NVIC.
-  //
-  NVIC_EnableIRQ(STIMER_CMPR5_IRQn);
-
-  //
-  // Configure the STIMER and run
-  //
-  am_hal_stimer_config(AM_HAL_STIMER_CFG_CLEAR | AM_HAL_STIMER_CFG_FREEZE);
-  am_hal_stimer_compare_delta_set(5, SAMPLE_INTERVAL);
-  am_hal_stimer_config(AM_HAL_STIMER_HFRC_3MHZ | AM_HAL_STIMER_CFG_COMPARE_F_ENABLE);
-}
-
-/* Setup the geophone data sampling buffers and sampling interrupt. */
-void geophone_setup()
-{
-  configureADC(); // Configure the ADC _before_ we start the timer
-
-  g_bGeophoneDataReady = false; // Clear the flag
-  g_bUsingGeophoneBuffer1 = true; // Use buffer 1
-  g_ui32GeophoneDataBufferPointer = 0; // Reset the pointer
-
-  //stimer_init(); // Now start the timer
-}
-
 /*
  * Interrupt service routine for sampling the geodata.  The geodata analog
  * pin is sampled at each invokation of the ISR.  If the buffer is full, a
@@ -70,7 +37,7 @@ void sampling_interrupt()
   if (samplingEnabled == false)
     return;
 
-  digitalWrite(PIN_LOGIC_DEBUG, !digitalRead(PIN_LOGIC_DEBUG));
+  //digitalWrite(PIN_LOGIC_DEBUG, !digitalRead(PIN_LOGIC_DEBUG));
 
   /* Read a sample and store it in the geodata buffer.  Apply a Hamming
      window as we go along.  It involves a cos operation; the alternative

@@ -6,8 +6,11 @@
 
   This firmware runs on the OpenLog Artemis and is dedicated to logging data from the SM-24 geophone:
   https://www.sparkfun.com/products/11744
-  The geophone signal is sampled by the ADS122C04 24-bit ADC found on the Qwiic PT100:
-  https://www.sparkfun.com/products/16770
+
+  The geophone signal is sampled by a Qwiic (I2C) ADC:
+    - SparkX Qwiic 24 Bit ADC - 4 Channel (ADS1219) - SPX-23455 : https://www.sparkfun.com/products/23455
+    - SparkFun Qwiic 12 Bit ADC - 4 Channel (ADS1015) - DEV-15334 : https://www.sparkfun.com/products/15334
+    - Qwiic PT100 ADS122C04 - SPX-16770 : https://www.sparkfun.com/products/16770
 
   This code is inspired by Ole Wolf's geophone: https://github.com/olewolf/geophone
   Thank you Ole!
@@ -20,19 +23,17 @@
   The 500 amplitude values, which are logged/displayed, correspond to 0.5Hz to 250.5Hz in 0.5Hz bins.
   You can use the Arduino IDE Serial Plotter to display the real-time spectrum.
 
-  The RTC can be set by a u-blox GNSS module.
+  The RTC can be set by a u-blox GNSS module if desired.
 
   Based on v2.8 of:
   OpenLog Artemis
   By: Nathan Seidle
   SparkFun Electronics
-  Date: November 26th, 2019
   License: please see LICENSE.md for more details
   Feel like supporting our work? Buy a board from SparkFun!
   https://www.sparkfun.com/products/16832
 
-  This firmware runs the OpenLog Artemis. A large variety of system settings can be
-  adjusted by connecting at 115200bps.
+  This firmware runs on OpenLog Artemis. Open a serial console at 115200 baud to see the output.
 
 */
 
@@ -69,7 +70,7 @@ const byte PIN_VIN_MONITOR = 34; // VIN/3 (1M/2M - will require a correction fac
 #endif
 
 const byte PIN_POWER_LOSS = 3;
-const byte PIN_LOGIC_DEBUG = 11;
+//const byte PIN_LOGIC_DEBUG = 11;
 const byte PIN_MICROSD_POWER = 15;
 const byte PIN_QWIIC_POWER = 18;
 const byte PIN_STAT_LED = 19;
@@ -174,7 +175,6 @@ uint64_t qwiicPowerOnTime = 0; //Used to delay after Qwiic power on to allow sen
 //#define TEST_AMPLITUDE_1 100 // Amplitude of the sinusoidal test signal
 //#define TEST_PERIOD_2 30303 // Uncomment to enable second (mixed) cosinusoidal test signal (period in micros) (30303 = 33Hz)
 //#define TEST_AMPLITUDE_2 50 // Amplitude of the sinusoidal test signal
-//#define SAMPLE_INTERVAL 6000 // Interval for 500Hz with a 3MHz clock
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -231,8 +231,8 @@ static const uint32_t LOOP_INTERVAL = 250;
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 void setup() {
-  pinMode(PIN_LOGIC_DEBUG, OUTPUT);
-  digitalWrite(PIN_LOGIC_DEBUG, HIGH);
+  //pinMode(PIN_LOGIC_DEBUG, OUTPUT);
+  //digitalWrite(PIN_LOGIC_DEBUG, HIGH);
 
   //If 3.3V rail drops below 3V, system will power down and maintain RTC
   pinMode(PIN_POWER_LOSS, INPUT); // BD49K30G-TL has CMOS output and does not need a pull-up
@@ -273,7 +273,7 @@ void setup() {
 
   Serial.flush(); //Complete any previous prints
   Serial.begin(settings.serialTerminalBaudRate);
-  if (settings.serialPlotterMode == false) Serial.printf("Artemis OpenLog Geophone Logger v%d.%d\n", FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR);
+  if (settings.serialPlotterMode == false) Serial.printf("Artemis OpenLog Geophone Logger v%d.%d\r\n", FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR);
 
 #ifdef noPowerLossProtection
   if (settings.serialPlotterMode == false) Serial.println(F("** No Power Loss Protection **"));
@@ -289,6 +289,8 @@ void setup() {
   }
 
   analogReadResolution(14); //Increase from default of 10
+
+  readVIN(); // Read VIN now to initialise the analog pin
 
   beginDataLogging(); //180ms
   lastSDFileNameChangeTime = rtcMillis(); // Record the time of the file name change
@@ -332,8 +334,6 @@ void setup() {
 
   digitalWrite(PIN_STAT_LED, LOW); // Turn the STAT LED off now that everything is configured
 
-  geophone_setup(); // Set up the ADC
-
   loop_thread.start(&startMainLoop);
 
   loop_thread.set_priority(osPriorityNormal1); // Increase loop_thread priority above the actual loop()
@@ -370,7 +370,9 @@ void startMainLoop()
 
 void mainLoop()
 {
-  digitalWrite(PIN_LOGIC_DEBUG, !digitalRead(PIN_LOGIC_DEBUG));
+  //digitalWrite(PIN_LOGIC_DEBUG, !digitalRead(PIN_LOGIC_DEBUG));
+
+  checkBattery();
 
   if (Serial.available()) // Check if the user pressed a key
   {
@@ -454,6 +456,7 @@ void mainLoop()
 //            printDebug("\n");
             for (int i = 0; i < 10; i++) //Wait for 10ms before trying again
             {
+              checkBattery();
               delay(1);
             }
           }
@@ -519,6 +522,7 @@ void mainLoop()
         dataLength--;
         if (bytesSent == delayEveryBytes)
         {
+          checkBattery();
           delay(1);
           bytesSent = 0;
         }
@@ -594,6 +598,7 @@ void beginSD()
     //Max current is 200mA average across 1s, peak 300mA
     for (int i = 0; i < 10; i++) //Wait
     {
+      checkBattery();
       delay(1);
     }
 
@@ -602,6 +607,7 @@ void beginSD()
       printDebug("SD init failed (first attempt). Trying again...\n");
       for (int i = 0; i < 250; i++) //Give SD more time to power up, then try again
       {
+        checkBattery();
         delay(1);
       }
       if (sd.begin(SD_CONFIG) == false) //Standard SdFat
@@ -722,21 +728,6 @@ void updateLogFileWrite()
   //printDebug((String)result);
   //printDebug("\n");
 }
-
-/*
-// stimer compare ISR - used to set the ADS122C04 sample rate
-extern "C" void am_stimer_cmpr5_isr(void)
-{
-  //
-  // Check the timer interrupt status.
-  //
-  am_hal_stimer_int_clear(AM_HAL_STIMER_INT_COMPAREF);
-  am_hal_stimer_compare_delta_set(5, SAMPLE_INTERVAL);
-
-  if (samplingEnabled == true)
-    sampling_interrupt();
-}
-*/
 
 //Power Loss ISR
 void powerLossISR(void)

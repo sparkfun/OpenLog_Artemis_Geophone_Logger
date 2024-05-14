@@ -32,6 +32,7 @@ bool detectQwiicDevices()
   //Give sensors, specifically those with a low I2C address, time to turn on
   for (int i = 0; i < 100; i++) //SCD30 required >50ms to turn on
   {
+    checkBattery();
     delay(1);
   }
 
@@ -48,7 +49,8 @@ bool detectQwiicDevices()
         if (addDevice(foundType, address) == true) //Records this device. //Returns false if device was already recorded.
         {
           if (settings.printDebugMessages == true)
-            Serial.printf("Added %s at address 0x%02X\n", getDeviceName(foundType), address);
+            if (settings.serialPlotterMode == false) 
+              Serial.printf("Added %s at address 0x%02X\r\n", getDeviceName(foundType), address);
         }
       }
     }
@@ -143,9 +145,9 @@ void menuConfigure_QwiicBus()
     Serial.println();
     Serial.println("Menu: Configure Qwiic Bus");
 
-    Serial.printf("1) Set Max Qwiic Bus Speed: %d Hz\n", settings.qwiicBusMaxSpeed);
+    Serial.printf("1) Set Max Qwiic Bus Speed: %d Hz\r\n", settings.qwiicBusMaxSpeed);
 
-    Serial.printf("2) Set Qwiic bus power up delay: %d ms\n", settings.qwiicBusPowerUpDelayMs);
+    Serial.printf("2) Set Qwiic bus power up delay: %d ms\r\n", settings.qwiicBusPowerUpDelayMs);
 
     Serial.println("x) Exit");
 
@@ -188,6 +190,7 @@ void menuConfigure_uBlox(void *configPtr)
   Serial.println("There are currently no configurable options for this device.");
   for (int i = 0; i < 500; i++)
   {
+    checkBattery();
     delay(1);
   }
 }
@@ -292,8 +295,20 @@ void menuConfigure_ADS122C04(void *configPtr)
     {
       if (sensorSetting->gain == ADS122C04_GAIN_1)
         sensorSetting->gain = ADS122C04_GAIN_128;
-      else
-        sensorSetting->gain -= 1;
+      else if (sensorSetting->gain == ADS122C04_GAIN_2)
+        sensorSetting->gain = ADS122C04_GAIN_1;
+      else if (sensorSetting->gain == ADS122C04_GAIN_4)
+        sensorSetting->gain = ADS122C04_GAIN_2;
+      else if (sensorSetting->gain == ADS122C04_GAIN_8)
+        sensorSetting->gain = ADS122C04_GAIN_4;
+      else if (sensorSetting->gain == ADS122C04_GAIN_16)
+        sensorSetting->gain = ADS122C04_GAIN_8;
+      else if (sensorSetting->gain == ADS122C04_GAIN_32)
+        sensorSetting->gain = ADS122C04_GAIN_16;
+      else if (sensorSetting->gain == ADS122C04_GAIN_64)
+        sensorSetting->gain = ADS122C04_GAIN_32;
+      else if (sensorSetting->gain == ADS122C04_GAIN_128)
+        sensorSetting->gain = ADS122C04_GAIN_64;
     }
     else if (incoming == 'x')
       break;

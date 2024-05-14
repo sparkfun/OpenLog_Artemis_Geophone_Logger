@@ -18,9 +18,7 @@ void menuMain()
 
     Serial.println("5) Configure Attached Devices");
 
-#if(HARDWARE_VERSION_MAJOR == 0)
     Serial.println("6) Configure Power Options");
-#endif
 
     Serial.println("r) Reset all settings to default");
 
@@ -42,10 +40,8 @@ void menuMain()
       menuThreshold();
     else if (incoming == '5')
       menuAttachedDevices();
-#if(HARDWARE_VERSION_MAJOR == 0)
     else if (incoming == '6')
       menuPower();
-#endif
     else if (incoming == 'd')
       menuDebug();
     else if (incoming == 'r')

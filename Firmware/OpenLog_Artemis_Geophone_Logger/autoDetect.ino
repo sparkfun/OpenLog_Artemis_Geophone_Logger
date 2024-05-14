@@ -101,7 +101,7 @@ bool addDevice(deviceType_e deviceType, uint8_t address)
       }
       break;
     default:
-      if (settings.serialPlotterMode == false) Serial.printf("addDevice Device type not found: %d\n", deviceType);
+      if (settings.serialPlotterMode == false) Serial.printf("addDevice Device type not found: %d\r\n", deviceType);
       break;
   }
 
@@ -172,7 +172,7 @@ bool beginQwiicDevices()
         }
         break;
       default:
-        if (settings.serialPlotterMode == false) Serial.printf("addDevice Device type not found: %d\n", temp->deviceType);
+        if (settings.serialPlotterMode == false) Serial.printf("addDevice Device type not found: %d\r\n", temp->deviceType);
         break;
     }
 
@@ -201,11 +201,11 @@ void printOnlineDevice()
     char sensorOnlineText[75];
     if (temp->online)
     {
-      sprintf(sensorOnlineText, "%s online at address 0x%02X\n", getDeviceName(temp->deviceType), temp->address);
+      sprintf(sensorOnlineText, "%s online at address 0x%02X\r\n", getDeviceName(temp->deviceType), temp->address);
     }
     else
     {
-      sprintf(sensorOnlineText, "%s failed to respond\n", getDeviceName(temp->deviceType));
+      sprintf(sensorOnlineText, "%s failed to respond\r\n", getDeviceName(temp->deviceType));
     }
     if (settings.serialPlotterMode == false) Serial.print(sensorOnlineText);
 
@@ -249,22 +249,129 @@ void configureDevice(node * temp)
       {
         SFE_ADS122C04 *sensor = (SFE_ADS122C04 *)temp->classPtr;
         struct_ADS122C04 *sensorSetting = (struct_ADS122C04 *)temp->configPtr;
+
+        sensor->setInputMultiplexer(ADS122C04_MUX_AIN1_AIN0); // Route AIN1 and AIN0 to AINP and AINN
+
+        if (sensorSetting->gain == ADS122C04_GAIN_128)
+        {
+          sensor->setGain(ADS122C04_GAIN_128); // Set the gain to 128
+          sensor->enablePGA(ADS122C04_PGA_ENABLED); // Enable the Programmable Gain Amplifier
+        }
+        else if (sensorSetting->gain == ADS122C04_GAIN_64)
+        {
+          sensor->setGain(ADS122C04_GAIN_64); // Set the gain to 64
+          sensor->enablePGA(ADS122C04_PGA_ENABLED); // Enable the Programmable Gain Amplifier
+        }
+        else if (sensorSetting->gain == ADS122C04_GAIN_32)
+        {
+          sensor->setGain(ADS122C04_GAIN_32); // Set the gain to 32
+          sensor->enablePGA(ADS122C04_PGA_ENABLED); // Enable the Programmable Gain Amplifier
+        }
+        else if (sensorSetting->gain == ADS122C04_GAIN_16)
+        {
+          sensor->setGain(ADS122C04_GAIN_16); // Set the gain to 16
+          sensor->enablePGA(ADS122C04_PGA_ENABLED); // Enable the Programmable Gain Amplifier
+        }
+        else if (sensorSetting->gain == ADS122C04_GAIN_8)
+        {
+          sensor->setGain(ADS122C04_GAIN_8); // Set the gain to 8
+          sensor->enablePGA(ADS122C04_PGA_ENABLED); // Enable the Programmable Gain Amplifier
+        }
+        else if (sensorSetting->gain == ADS122C04_GAIN_4)
+        {
+          sensor->setGain(ADS122C04_GAIN_4); // Set the gain to 4
+          sensor->enablePGA(ADS122C04_PGA_DISABLED); // Disable the Programmable Gain Amplifier
+        }
+        else if (sensorSetting->gain == ADS122C04_GAIN_2)
+        {
+          sensor->setGain(ADS122C04_GAIN_2); // Set the gain to 2
+          sensor->enablePGA(ADS122C04_PGA_DISABLED); // Disable the Programmable Gain Amplifier
+        }
+        else
+        {
+          sensor->setGain(ADS122C04_GAIN_1); // Set the gain to 1
+          sensor->enablePGA(ADS122C04_PGA_DISABLED); // Disable the Programmable Gain Amplifier
+        }
+
+        sensor->setDataRate(ADS122C04_DATA_RATE_600SPS); // Set the data rate (samples per second) to 600
+        sensor->setOperatingMode(ADS122C04_OP_MODE_NORMAL); // Disable turbo mode
+        sensor->setConversionMode(ADS122C04_CONVERSION_MODE_SINGLE_SHOT); // Use single shot mode
+        sensor->setVoltageReference(ADS122C04_VREF_INTERNAL); // Use the internal 2.048V reference
+        sensor->enableInternalTempSensor(ADS122C04_TEMP_SENSOR_OFF); // Disable the temperature sensor
+        sensor->setDataCounter(ADS122C04_DCNT_DISABLE); // Disable the data counter (Note: the library does not currently support the data count)
+        sensor->setDataIntegrityCheck(ADS122C04_CRC_DISABLED); // Disable CRC checking (Note: the library does not currently support data integrity checking)
+        sensor->setBurnOutCurrent(ADS122C04_BURN_OUT_CURRENT_OFF); // Disable the burn-out current
+        sensor->setIDACcurrent(ADS122C04_IDAC_CURRENT_OFF); // Disable the IDAC current
+        sensor->setIDAC1mux(ADS122C04_IDAC1_DISABLED); // Disable IDAC1
+        sensor->setIDAC2mux(ADS122C04_IDAC2_DISABLED); // Disable IDAC2
+
+        if((settings.printDebugMessages == true) && (settings.serialPlotterMode == false))
+        {
+          sensor->enableDebugging(Serial); //Enable debug messages on Serial
+          sensor->printADS122C04config(); //Print the configuration
+          sensor->disableDebugging(); //Enable debug messages on Serial
+        }
+
+        sensor->start(); // Start the first conversion
       }
       break;
     case DEVICE_ADC_ADS1015:
       {
         ADS1015 *sensor = (ADS1015 *)temp->classPtr;
         struct_ADS1015 *sensorSetting = (struct_ADS1015 *)temp->configPtr;
+
+        if (sensorSetting->gain == ADS1015_CONFIG_PGA_TWOTHIRDS)
+        {
+          sensor->setGain(ADS1015_CONFIG_PGA_TWOTHIRDS); // Set the gain to 2/3
+        }
+        else if (sensorSetting->gain == ADS1015_CONFIG_PGA_1)
+        {
+          sensor->setGain(ADS1015_CONFIG_PGA_1); // Set the gain to 1
+        }
+        else if (sensorSetting->gain == ADS1015_CONFIG_PGA_2)
+        {
+          sensor->setGain(ADS1015_CONFIG_PGA_2); // Set the gain to 2
+        }
+        else if (sensorSetting->gain == ADS1015_CONFIG_PGA_4)
+        {
+          sensor->setGain(ADS1015_CONFIG_PGA_4); // Set the gain to 4
+        }
+        else if (sensorSetting->gain == ADS1015_CONFIG_PGA_8)
+        {
+          sensor->setGain(ADS1015_CONFIG_PGA_8); // Set the gain to 8
+        }
+        else
+        {
+          sensor->setGain(ADS1015_CONFIG_PGA_16); // Set the gain to 16
+        }
+
+        sensor->setSampleRate(ADS1015_CONFIG_RATE_920HZ); // 490Hz isn't fast enough - use 920Hz
+        sensor->useConversionReady(true); // Use single-shot mode. Read the config register OS bit to see if the conversion is complete
+        sensor->getDifferential(ADS1015_CONFIG_MUX_DIFF_P0_N1); // Get a differential voltage . Sets the mux correctly
       }
       break;
     case DEVICE_ADC_ADS1219:
       {
         SfeADS1219ArdI2C *sensor = (SfeADS1219ArdI2C *)temp->classPtr;
         struct_ADS1219 *sensorSetting = (struct_ADS1219 *)temp->configPtr;
+
+        if (sensorSetting->gain == ADS1219_GAIN_1)
+        {
+          sensor->setGain(ADS1219_GAIN_1); // Set the gain to 1
+        }
+        else
+        {
+          sensor->setGain(ADS1219_GAIN_4); // Set the gain to 4
+        }
+
+        sensor->setDataRate(ADS1219_DATA_RATE_1000SPS);
+        sensor->setInputMultiplexer(ADS1219_CONFIG_MUX_DIFF_P0_N1);
+        sensor->setConversionMode(ADS1219_CONVERSION_SINGLE_SHOT);
+        sensor->startSync(); // Start the first conversion
       }
       break;
     default:
-      if (settings.serialPlotterMode == false) Serial.printf("configureDevice: Unknown device type %d: %s\n", deviceType, getDeviceName((deviceType_e)deviceType));
+      if (settings.serialPlotterMode == false) Serial.printf("configureDevice: Unknown device type %d: %s\r\n", deviceType, getDeviceName((deviceType_e)deviceType));
       break;
   }
 }
@@ -438,12 +545,12 @@ deviceType_e testDevice(uint8_t i2cAddress)
       break;
     default:
       {
-        if (settings.serialPlotterMode == false) Serial.printf("Unknown device at address (0x%02X)\n", i2cAddress);
+        if (settings.serialPlotterMode == false) Serial.printf("Unknown device at address (0x%02X)\r\n", i2cAddress);
         return DEVICE_UNKNOWN_DEVICE;
       }
       break;
   }
-  if (settings.serialPlotterMode == false) Serial.printf("Known I2C address but device failed identification at address 0x%02X\n", i2cAddress);
+  if (settings.serialPlotterMode == false) Serial.printf("Known I2C address but device failed identification at address 0x%02X\r\n", i2cAddress);
   return DEVICE_UNKNOWN_DEVICE;
 }
 
