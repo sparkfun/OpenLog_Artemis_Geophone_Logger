@@ -57,47 +57,24 @@ void recordSystemSettingsToFile()
     if (sd.exists("OLA_Geophone_settings.txt"))
       sd.remove("OLA_Geophone_settings.txt");
 
-    SdFile settingsFile; //FAT32
+    #if SD_FAT_TYPE == 1
+    File32 settingsFile;
+    #elif SD_FAT_TYPE == 2
+    ExFile settingsFile;
+    #elif SD_FAT_TYPE == 3
+    FsFile settingsFile;
+    #else // SD_FAT_TYPE == 0
+    File settingsFile;
+    #endif  // SD_FAT_TYPE
     if (settingsFile.open("OLA_Geophone_settings.txt", O_CREAT | O_APPEND | O_WRITE) == false)
     {
-      Serial.println("Failed to create settings file");
+      Serial.println(F("Failed to create settings file"));
       return;
     }
 
     settingsFile.println("sizeOfSettings=" + (String)settings.sizeOfSettings);
     settingsFile.println("olaIdentifier=" + (String)settings.olaIdentifier);
     settingsFile.println("nextDataLogNumber=" + (String)settings.nextDataLogNumber);
-
-    // Convert uint64_t to string
-    // Based on printLLNumber by robtillaart
-    // https://forum.arduino.cc/index.php?topic=143584.msg1519824#msg1519824
-    char tempTimeRev[20]; // Char array to hold to usBetweenReadings (reversed order)
-    char tempTime[20]; // Char array to hold to usBetweenReadings (correct order)
-    uint64_t usBR = settings.usBetweenReadings;
-    unsigned int i = 0;
-    if (usBR == 0ULL) // if usBetweenReadings is zero, set tempTime to "0"
-    {
-      tempTime[0] = '0';
-      tempTime[1] = 0;
-    }
-    else
-    {
-      while (usBR > 0)
-      {
-        tempTimeRev[i++] = (usBR % 10) + '0'; // divide by 10, convert the remainder to char
-        usBR /= 10; // divide by 10
-      }
-      unsigned int j = 0;
-      while (i > 0)
-      {
-        tempTime[j++] = tempTimeRev[--i]; // reverse the order
-        tempTime[j] = 0; // mark the end with a NULL
-      }
-    }
-    
-    settingsFile.println("usBetweenReadings=" + (String)tempTime);
-
-    settingsFile.println("enableRTC=" + (String)settings.enableRTC);
     settingsFile.println("enableSD=" + (String)settings.enableSD);
     settingsFile.println("enableTerminalOutput=" + (String)settings.enableTerminalOutput);
     settingsFile.println("logDate=" + (String)settings.logDate);
@@ -110,21 +87,20 @@ void recordSystemSettingsToFile()
     settingsFile.println("americanDateStyle=" + (String)settings.americanDateStyle);
     settingsFile.println("hour24Style=" + (String)settings.hour24Style);
     settingsFile.println("serialTerminalBaudRate=" + (String)settings.serialTerminalBaudRate);
-    settingsFile.println("serialLogBaudRate=" + (String)settings.serialLogBaudRate);
-    settingsFile.println("localUTCOffset=" + (String)settings.localUTCOffset);
+    settingsFile.print("localUTCOffset="); settingsFile.println(settings.localUTCOffset);
     settingsFile.println("printDebugMessages=" + (String)settings.printDebugMessages);
     settingsFile.println("powerDownQwiicBusBetweenReads=" + (String)settings.powerDownQwiicBusBetweenReads);
     settingsFile.println("qwiicBusMaxSpeed=" + (String)settings.qwiicBusMaxSpeed);
     settingsFile.println("qwiicBusPowerUpDelayMs=" + (String)settings.qwiicBusPowerUpDelayMs);
     settingsFile.println("printMeasurementCount=" + (String)settings.printMeasurementCount);
-    settingsFile.println("enablePwrLedDuringSleep=" + (String)settings.enablePwrLedDuringSleep);
-    settingsFile.println("logVIN=" + (String)settings.logVIN);
     settingsFile.println("openNewLogFilesAfter=" + (String)settings.openNewLogFilesAfter);
-    settingsFile.println("threshold=" + (String)settings.threshold);
-    settingsFile.println("geophoneGain=" + (String)settings.geophoneGain);
+    settingsFile.print("threshold="); settingsFile.println(settings.threshold);
     settingsFile.println("serialPlotterMode=" + (String)settings.serialPlotterMode);
     settingsFile.println("useGPIO32ForStopLogging=" + (String)settings.useGPIO32ForStopLogging);
+    settingsFile.println("enableLowBatteryDetection=" + (String)settings.enableLowBatteryDetection);
+    settingsFile.print("lowBatteryThreshold="); settingsFile.println(settings.lowBatteryThreshold);
     
+    updateDataFileAccess(&settingsFile); // Update the file access time & date
     settingsFile.close();
   }
 }
@@ -139,10 +115,19 @@ bool loadSystemSettingsFromFile()
   {
     if (sd.exists("OLA_Geophone_settings.txt"))
     {
-      SdFile settingsFile; //FAT32
+      #if SD_FAT_TYPE == 1
+      File32 settingsFile;
+      #elif SD_FAT_TYPE == 2
+      ExFile settingsFile;
+      #elif SD_FAT_TYPE == 3
+      FsFile settingsFile;
+      #else // SD_FAT_TYPE == 0
+      File settingsFile;
+      #endif  // SD_FAT_TYPE
+
       if (settingsFile.open("OLA_Geophone_settings.txt", O_READ) == false)
       {
-        //Serial.println("Failed to open settings file");
+        Serial.println(F("Failed to open device settings file"));
         return (false);
       }
 
@@ -152,10 +137,10 @@ bool loadSystemSettingsFromFile()
       while (settingsFile.available()) {
         int n = settingsFile.fgets(line, sizeof(line));
         if (n <= 0) {
-          if (settings.serialPlotterMode == false) Serial.printf("Failed to read line %d from settings file\n", lineNumber);
+          if (settings.serialPlotterMode == false) Serial.printf("Failed to read line %d from settings file\r\n", lineNumber);
         }
         else if (line[n - 1] != '\n' && n == (sizeof(line) - 1)) {
-          if (settings.serialPlotterMode == false) Serial.printf("Settings line %d too long\n", lineNumber);
+          if (settings.serialPlotterMode == false) Serial.printf("Settings line %d too long\r\n", lineNumber);
           if (lineNumber == 0)
           {
             //If we can't read the first line of the settings file, give up
@@ -164,7 +149,7 @@ bool loadSystemSettingsFromFile()
           }
         }
         else if (parseLine(line) == false) {
-          if (settings.serialPlotterMode == false) Serial.printf("Failed to parse line %d: %s\n", lineNumber, line);
+          if (settings.serialPlotterMode == false) Serial.printf("Failed to parse line %d: %s\r\n", lineNumber, line);
           if (lineNumber == 0)
           {
             //If we can't read the first line of the settings file, give up
@@ -219,14 +204,15 @@ bool parseLine(char* str) {
   str = strtok(nullptr, "\n");
   if (!str) return false;
 
-  //Serial.printf("s = %s\n", str);
+  //Serial.printf("s = %s\r\n", str);
   //Serial.flush();
 
   // Convert string to double.
   double d = strtod(str, &ptr);
+
   if (str == ptr || *skipSpace(ptr)) return false;
 
-  //Serial.printf("d = %lf\n", d);
+  //Serial.printf("d = %lf\r\n", d);
   //Serial.flush();
 
   // Get setting name
@@ -244,19 +230,13 @@ bool parseLine(char* str) {
 
     //Check to see if this setting file is compatible with this version of OLA
     if (d != sizeof(settings))
-      Serial.printf("Warning: Settings size is %d but current firmware expects %d. Attempting to use settings from file.\n", d, sizeof(settings));
+      Serial.printf("Warning: Settings size is %d but current firmware expects %d. Attempting to use settings from file.\r\n", d, sizeof(settings));
 
   }
   else if (strcmp(settingName, "olaIdentifier") == 0)
     settings.olaIdentifier = d;
   else if (strcmp(settingName, "nextDataLogNumber") == 0)
     settings.nextDataLogNumber = d;
-  else if (strcmp(settingName, "usBetweenReadings") == 0)
-  {
-    settings.usBetweenReadings = d;
-  }
-  else if (strcmp(settingName, "enableRTC") == 0)
-    settings.enableRTC = d;
   else if (strcmp(settingName, "enableSD") == 0)
     settings.enableSD = d;
   else if (strcmp(settingName, "enableTerminalOutput") == 0)
@@ -281,8 +261,6 @@ bool parseLine(char* str) {
     settings.hour24Style = d;
   else if (strcmp(settingName, "serialTerminalBaudRate") == 0)
     settings.serialTerminalBaudRate = d;
-  else if (strcmp(settingName, "serialLogBaudRate") == 0)
-    settings.serialLogBaudRate = d;
   else if (strcmp(settingName, "localUTCOffset") == 0)
     settings.localUTCOffset = d;
   else if (strcmp(settingName, "printDebugMessages") == 0)
@@ -295,22 +273,20 @@ bool parseLine(char* str) {
     settings.qwiicBusPowerUpDelayMs = d;
   else if (strcmp(settingName, "printMeasurementCount") == 0)
     settings.printMeasurementCount = d;
-  else if (strcmp(settingName, "enablePwrLedDuringSleep") == 0)
-    settings.enablePwrLedDuringSleep = d;
-  else if (strcmp(settingName, "logVIN") == 0)
-    settings.logVIN = d;
   else if (strcmp(settingName, "openNewLogFilesAfter") == 0)
     settings.openNewLogFilesAfter = d;
   else if (strcmp(settingName, "threshold") == 0)
     settings.threshold = d;
-  else if (strcmp(settingName, "geophoneGain") == 0)
-    settings.geophoneGain = d;
   else if (strcmp(settingName, "serialPlotterMode") == 0)
     settings.serialPlotterMode = d;
   else if (strcmp(settingName, "useGPIO32ForStopLogging") == 0)
     settings.useGPIO32ForStopLogging = d;
+  else if (strcmp(settingName, "enableLowBatteryDetection") == 0)
+    settings.enableLowBatteryDetection = d;
+  else if (strcmp(settingName, "lowBatteryThreshold") == 0)
+    settings.lowBatteryThreshold = d;
   else
-    Serial.printf("Unknown setting %s on line: %s\n", settingName, str);
+    Serial.printf("Unknown setting %s on line: %s\r\n", settingName, str);
 
   return (true);
 }
@@ -323,10 +299,18 @@ void recordDeviceSettingsToFile()
     if (sd.exists("OLA_Geophone_deviceSettings.txt"))
       sd.remove("OLA_Geophone_deviceSettings.txt");
 
-    SdFile settingsFile; //FAT32
+    #if SD_FAT_TYPE == 1
+    File32 settingsFile;
+    #elif SD_FAT_TYPE == 2
+    ExFile settingsFile;
+    #elif SD_FAT_TYPE == 3
+    FsFile settingsFile;
+    #else // SD_FAT_TYPE == 0
+    File settingsFile;
+    #endif  // SD_FAT_TYPE
     if (settingsFile.open("OLA_Geophone_deviceSettings.txt", O_CREAT | O_APPEND | O_WRITE) == false)
     {
-      if (settings.serialPlotterMode == false) Serial.println("Failed to create device settings file");
+      Serial.println(F("Failed to create device settings file"));
       return;
     }
 
@@ -335,17 +319,10 @@ void recordDeviceSettingsToFile()
     node *temp = head;
     while (temp != NULL)
     {
-      sprintf(base, "%s.%d.%d.%d.%d.", getDeviceName(temp->deviceType), temp->deviceType, temp->address, temp->muxAddress, temp->portNumber);
+      sprintf(base, "%s.%d.%d.", getDeviceName(temp->deviceType), temp->deviceType, temp->address);
 
       switch (temp->deviceType)
       {
-        case DEVICE_MULTIPLEXER:
-          {
-            //Currently, no settings for multiplexer to record
-            //struct_multiplexer *nodeSetting = (struct_multiplexer *)temp->configPtr; //Create a local pointer that points to same spot as node does
-            //settingsFile.println((String)base + "log=" + nodeSetting->log);
-          }
-          break;
         case DEVICE_GPS_UBLOX:
           {
             struct_uBlox *nodeSetting = (struct_uBlox *)temp->configPtr;
@@ -369,20 +346,25 @@ void recordDeviceSettingsToFile()
           {
             struct_ADS122C04 *nodeSetting = (struct_ADS122C04 *)temp->configPtr;
             settingsFile.println((String)base + "log=" + nodeSetting->log);
-            settingsFile.println((String)base + "logCentigrade=" + nodeSetting->logCentigrade);
-            settingsFile.println((String)base + "logFahrenheit=" + nodeSetting->logFahrenheit);
-            settingsFile.println((String)base + "logInternalTemperature=" + nodeSetting->logInternalTemperature);
-            settingsFile.println((String)base + "logRawVoltage=" + nodeSetting->logRawVoltage);
-            settingsFile.println((String)base + "useFourWireMode=" + nodeSetting->useFourWireMode);
-            settingsFile.println((String)base + "useThreeWireMode=" + nodeSetting->useThreeWireMode);
-            settingsFile.println((String)base + "useTwoWireMode=" + nodeSetting->useTwoWireMode);
-            settingsFile.println((String)base + "useFourWireHighTemperatureMode=" + nodeSetting->useFourWireHighTemperatureMode);
-            settingsFile.println((String)base + "useThreeWireHighTemperatureMode=" + nodeSetting->useThreeWireHighTemperatureMode);
-            settingsFile.println((String)base + "useTwoWireHighTemperatureMode=" + nodeSetting->useTwoWireHighTemperatureMode);
+            settingsFile.println((String)base + "gain=" + nodeSetting->gain);
+          }
+          break;
+        case DEVICE_ADC_ADS1015:
+          {
+            struct_ADS1015 *nodeSetting = (struct_ADS1015 *)temp->configPtr;
+            settingsFile.println((String)base + "log=" + nodeSetting->log);
+            settingsFile.println((String)base + "gain=" + nodeSetting->gain);
+          }
+          break;
+        case DEVICE_ADC_ADS1219:
+          {
+            struct_ADS1219 *nodeSetting = (struct_ADS1219 *)temp->configPtr;
+            settingsFile.println((String)base + "log=" + nodeSetting->log);
+            settingsFile.println((String)base + "gain=" + nodeSetting->gain);
           }
           break;
         default:
-          if (settings.serialPlotterMode == false) Serial.printf("recordSettingsToFile Unknown device: %s\n", base);
+          if (settings.serialPlotterMode == false) Serial.printf("recordSettingsToFile Unknown device: %s\r\n", base);
           //settingsFile.println((String)base + "=UnknownDeviceSettings");
           break;
       }
@@ -402,7 +384,16 @@ bool loadDeviceSettingsFromFile()
   {
     if (sd.exists("OLA_Geophone_deviceSettings.txt"))
     {
-      SdFile settingsFile; //FAT32
+      #if SD_FAT_TYPE == 1
+      File32 settingsFile;
+      #elif SD_FAT_TYPE == 2
+      ExFile settingsFile;
+      #elif SD_FAT_TYPE == 3
+      FsFile settingsFile;
+      #else // SD_FAT_TYPE == 0
+      File settingsFile;
+      #endif  // SD_FAT_TYPE
+
       if (settingsFile.open("OLA_Geophone_deviceSettings.txt", O_READ) == false)
       {
         if (settings.serialPlotterMode == false) Serial.println("Failed to open device settings file");
@@ -415,13 +406,13 @@ bool loadDeviceSettingsFromFile()
       while (settingsFile.available()) {
         int n = settingsFile.fgets(line, sizeof(line));
         if (n <= 0) {
-          if (settings.serialPlotterMode == false) Serial.printf("Failed to read line %d from settings file\n", lineNumber);
+          if (settings.serialPlotterMode == false) Serial.printf("Failed to read line %d from settings file\r\n", lineNumber);
         }
         else if (line[n - 1] != '\n' && n == (sizeof(line) - 1)) {
-          if (settings.serialPlotterMode == false) Serial.printf("Settings line %d too long\n", lineNumber);
+          if (settings.serialPlotterMode == false) Serial.printf("Settings line %d too long\r\n", lineNumber);
         }
         else if (parseDeviceLine(line) == false) {
-          if (settings.serialPlotterMode == false) Serial.printf("Failed to parse line %d: %s\n", lineNumber + 1, line);
+          if (settings.serialPlotterMode == false) Serial.printf("Failed to parse line %d: %s\r\n", lineNumber + 1, line);
         }
 
         lineNumber++;
@@ -464,22 +455,20 @@ bool parseDeviceLine(char* str) {
   str = strtok(nullptr, "\n");
   if (!str) return false;
 
-  //Serial.printf("s = %s\n", str);
+  //Serial.printf("s = %s\r\n", str);
   //Serial.flush();
 
   // Convert string to double.
   double d = strtod(str, &ptr);
   if (str == ptr || *skipSpace(ptr)) return false;
 
-  //Serial.printf("d = %lf\n", d);
+  //Serial.printf("d = %lf\r\n", d);
   //Serial.flush();
 
   //Break device setting into its constituent parts
   char deviceSettingName[50];
   deviceType_e deviceType;
   uint8_t address;
-  uint8_t muxAddress;
-  uint8_t portNumber;
   uint8_t count = 0;
   char *split = strtok(settingName, ".");
   while (split != NULL)
@@ -491,29 +480,22 @@ bool parseDeviceLine(char* str) {
     else if (count == 2)
       address = atoi(split);
     else if (count == 3)
-      muxAddress = atoi(split);
-    else if (count == 4)
-      portNumber = atoi(split);
-    else if (count == 5)
       sprintf(deviceSettingName, "%s", split);
     split = strtok(NULL, ".");
     count++;
   }
 
-  if (count < 5)
+  if (count < 3)
   {
-    if (settings.serialPlotterMode == false) Serial.printf("Incomplete setting: %s\n", settingName);
+    if (settings.serialPlotterMode == false) Serial.printf("Incomplete setting: %s\r\n", settingName);
     return false;
   }
 
-  //Serial.printf("%d: %d.%d.%d - %s\n", deviceType, address, muxAddress, portNumber, deviceSettingName);
-  //Serial.flush();
-
   //Find the device in the list that has this device type and address
-  void *deviceConfigPtr = getConfigPointer(deviceType, address, muxAddress, portNumber);
+  void *deviceConfigPtr = getConfigPointer(deviceType, address);
   if (deviceConfigPtr == NULL)
   {
-    //Serial.printf("Setting in file found but no matching device on bus is available: %s\n", settingName);
+    //Serial.printf("Setting in file found but no matching device on bus is available: %s\r\n", settingName);
     //Serial.flush();
   }
   else
@@ -559,7 +541,7 @@ bool parseDeviceLine(char* str) {
           else if (strcmp(deviceSettingName, "i2cSpeed") == 0)
             nodeSetting->i2cSpeed = d;
           else
-            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\n", deviceSettingName);
+            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\r\n", deviceSettingName);
         }
         break;
       case DEVICE_ADC_ADS122C04:
@@ -567,32 +549,36 @@ bool parseDeviceLine(char* str) {
           struct_ADS122C04 *nodeSetting = (struct_ADS122C04 *)deviceConfigPtr; //Create a local pointer that points to same spot as node does
           if (strcmp(deviceSettingName, "log") == 0)
             nodeSetting->log = d;
-          else if (strcmp(deviceSettingName, "logCentigrade") == 0)
-            nodeSetting->logCentigrade = d;
-          else if (strcmp(deviceSettingName, "logFahrenheit") == 0)
-            nodeSetting->logFahrenheit = d;
-          else if (strcmp(deviceSettingName, "logInternalTemperature") == 0)
-            nodeSetting->logInternalTemperature = d;
-          else if (strcmp(deviceSettingName, "logRawVoltage") == 0)
-            nodeSetting->logRawVoltage = d;
-          else if (strcmp(deviceSettingName, "useFourWireMode") == 0)
-            nodeSetting->useFourWireMode = d;
-          else if (strcmp(deviceSettingName, "useThreeWireMode") == 0)
-            nodeSetting->useThreeWireMode = d;
-          else if (strcmp(deviceSettingName, "useTwoWireMode") == 0)
-            nodeSetting->useTwoWireMode = d;
-          else if (strcmp(deviceSettingName, "useFourWireHighTemperatureMode") == 0)
-            nodeSetting->useFourWireHighTemperatureMode = d;
-          else if (strcmp(deviceSettingName, "useThreeWireHighTemperatureMode") == 0)
-            nodeSetting->useThreeWireHighTemperatureMode = d;
-          else if (strcmp(deviceSettingName, "useTwoWireHighTemperatureMode") == 0)
-            nodeSetting->useTwoWireHighTemperatureMode = d;
+          else if (strcmp(deviceSettingName, "gain") == 0)
+            nodeSetting->gain = d;
           else
-            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\n", deviceSettingName);
+            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\r\n", deviceSettingName);
+        }
+        break;
+      case DEVICE_ADC_ADS1015:
+        {
+          struct_ADS1015 *nodeSetting = (struct_ADS1015 *)deviceConfigPtr; //Create a local pointer that points to same spot as node does
+          if (strcmp(deviceSettingName, "log") == 0)
+            nodeSetting->log = d;
+          else if (strcmp(deviceSettingName, "gain") == 0)
+            nodeSetting->gain = d;
+          else
+            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\r\n", deviceSettingName);
+        }
+        break;
+      case DEVICE_ADC_ADS1219:
+        {
+          struct_ADS1219 *nodeSetting = (struct_ADS1219 *)deviceConfigPtr; //Create a local pointer that points to same spot as node does
+          if (strcmp(deviceSettingName, "log") == 0)
+            nodeSetting->log = d;
+          else if (strcmp(deviceSettingName, "gain") == 0)
+            nodeSetting->gain = (ads1219_gain_config_t)d;
+          else
+            if (settings.serialPlotterMode == false) Serial.printf("Unknown device setting: %s\r\n", deviceSettingName);
         }
         break;
       default:
-        if (settings.serialPlotterMode == false) Serial.printf("Unknown device type: %d\n", deviceType);
+        if (settings.serialPlotterMode == false) Serial.printf("Unknown device type: %d\r\n", deviceType);
         Serial.flush();
         break;
     }

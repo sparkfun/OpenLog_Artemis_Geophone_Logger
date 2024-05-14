@@ -11,7 +11,16 @@ void msg(const char * message)
 //Updates EEPROM and then appends to the new log file.
 char* findNextAvailableLog(int &newFileNumber, const char *fileLeader)
 {
-  SdFile newFile; //This will contain the file for SD writing
+  //This will contain the file for SD writing
+  #if SD_FAT_TYPE == 1
+  File32 newFile;
+  #elif SD_FAT_TYPE == 2
+  ExFile newFile;
+  #elif SD_FAT_TYPE == 3
+  FsFile newFile;
+  #else // SD_FAT_TYPE == 0
+  File newFile;
+  #endif  // SD_FAT_TYPE
 
   if (newFileNumber < 2) //If the settings have been reset, let's warn the user that this could take a while!
   {
@@ -26,7 +35,18 @@ char* findNextAvailableLog(int &newFileNumber, const char *fileLeader)
   static char newFileName[40];
   while (1)
   {
-    sprintf(newFileName, "%s%05u.TXT", fileLeader, newFileNumber); //Splice the new file number into this file name. Max no. is 99999.
+    char newFileNumberStr[6];
+    if (newFileNumber < 10)
+      sprintf(newFileNumberStr, "0000%d", newFileNumber);
+    else if (newFileNumber < 100)
+      sprintf(newFileNumberStr, "000%d", newFileNumber);
+    else if (newFileNumber < 1000)
+      sprintf(newFileNumberStr, "00%d", newFileNumber);
+    else if (newFileNumber < 10000)
+      sprintf(newFileNumberStr, "0%d", newFileNumber);
+    else
+      sprintf(newFileNumberStr, "%d", newFileNumber);
+    sprintf(newFileName, "%s%s.TXT", fileLeader, newFileNumberStr); //Splice the new file number into this file name. Max no. is 99999.
 
     if (sd.exists(newFileName) == false) break; //File name not found so we will use it.
 

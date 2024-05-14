@@ -14,8 +14,7 @@
 ## Background
 
 [Seismology](https://en.wikipedia.org/wiki/Seismology) is the study of earthquakes and other processes that relate to the propagation of elastic waves through the Earth.
-If you have ever experienced an earthquake, you'll know exactly what we're talking about. But maybe you've been near a quarry or mine when they've been blasting; you will have experienced
-seismic waves then too.
+If you have ever experienced an earthquake, you'll know exactly what we're talking about. But maybe you've been near a quarry or mine when they've been blasting; you will have experienced seismic waves then too.
 
 You can detect seismic waves with a [seismometer](https://en.wikipedia.org/wiki/Seismometer), which is an instrument that records the timing and characteristics of the motion of the ground.
 If you have access to multiple seismometers, you can combine their data to calculate or triangulate the source of an earthquake.
@@ -30,8 +29,14 @@ SparkFun OpenLog Artemis.
 
 ### Essentials:
 
-- **[OpenLog Artemis - SPX-15846](https://www.sparkfun.com/products/15846)**
-- **[Qwiic PT100 ADS122C04 - SPX-16770](https://www.sparkfun.com/products/16770)**
+- **OpenLog Artemis**
+    - **[SparkFun OpenLog Artemis - DEV-16832](https://www.sparkfun.com/products/16832)**
+    - **[SparkFun OpenLog Artemis (without IMU) - DEV-19426](https://www.sparkfun.com/products/19426)**
+    - **[SparkX OpenLog Artemis - SPX-15846](https://www.sparkfun.com/products/15846)**
+- **A suitable ADC board:**
+    - **[SparkX Qwiic 24 Bit ADC - 4 Channel (ADS1219) - SPX-23455](https://www.sparkfun.com/products/23455)**
+    - **[SparkFun Qwiic 12 Bit ADC - 4 Channel (ADS1015) - DEV-15334](https://www.sparkfun.com/products/15334)**
+    - **[Qwiic PT100 ADS122C04 - SPX-16770](https://www.sparkfun.com/products/16770)**
 - **[SM-24 Geophone - SEN-11744](https://www.sparkfun.com/products/11744)**
 - **1300Ω Resistor**
   - 1300Ω will give best performance but a [1000Ω (1KΩ) resistor](https://www.sparkfun.com/products/14492) will work too
@@ -39,13 +44,13 @@ SparkFun OpenLog Artemis.
 - **Stranded Hook-Up Wire**
   - The 22 AWG wire in our [Hook-Up Wire Assortment](https://www.sparkfun.com/products/11375) is a perfect choice
 - **Qwiic Cable**
-  - A [50mm Cable](https://www.sparkfun.com/products/14426) is all you need but our [Qwiic Cable Kit](https://www.sparkfun.com/products/15081) gives you all the options
+  - A [50mm Cable](https://www.sparkfun.com/products/17260) is all you need but our [Qwiic Cable Kit](https://www.sparkfun.com/products/15081) gives you all the options
 
 ### Extras:
 
 - **[microSD Card](https://www.sparkfun.com/products/15107)**
-- **[Lithium Ion Battery](https://www.sparkfun.com/products/13813)**
-- **[USB-C Cable](https://www.sparkfun.com/products/15092)**
+- **[Lithium Ion Battery](https://www.sparkfun.com/products/18286)**
+- **[USB-C Cable](https://www.sparkfun.com/products/15425)**
 
 ## Prepare the geophone
 
@@ -69,26 +74,40 @@ if you are doing this for the first time.
 We need to solder two lengths of stranded hook-up wire to the geophone pins. This is best done at the same time as when you solder on the damping resistor.
 
 Keep the wires short. 150mm / 6" should be more than enough. After soldering the wires to the geophone pins, twist the wires together (to help minimise noise)
-and then strip the ends so they can be inserted into the latch terminals on the Qwiic PT100.
+and then strip the ends so they can be inserted into the latch terminals on the Qwiic PT100. For the ADS1219 and ADS1015, you may want to solder the wires to the
+PCB, or use header pins and a suitable crimp connector.
 
-## Connect the geophone to the Qwiic PT100
+## Connect the geophone to the ADC
+
+### SparkX Qwiic 24 Bit ADC - 4 Channel (ADS1219)
+
+The ADS1219 is a four channel ADC with 24-bit resolution. Connect the two wires from the geophone to AIN0 and AIN1. (The polarity does not matter, connect either wire to either terminal.) You may want to use header pins and a suitable crimp connector.
+
+### SparkFun Qwiic 12 Bit ADC - 4 Channel (ADS1015)
+
+The ADS1015 is a four channel ADC with 12-bit resolution. Connect the two wires from the geophone to A0 and A1. (The polarity does not matter, connect either wire to either terminal.)
+You may want to use header pins and a suitable crimp connector.
+
+### Qwiic PT100 ADS122C04
 
 The Qwiic PT100 is designed to measure temperature very accurately using a 100Ω Platinum Resistance Thermometer. However, the heart of the Qwiic PT100 is the ADS122C04
-24-bit analog-to-digital converter (ADC) which is perfect for digitizing the signal from the geophone. It has a differential input as well as adjustable gain (x1 to x128), which we can use to
-amplify the small signals from the geophone.
+24-bit analog-to-digital converter (ADC) which is perfect for digitizing the signal from the geophone. It has a differential input as well as adjustable gain (x1 to x128), which we can use to amplify the small signals from the geophone.
 
 Please check that the A/B/C jumpers on the back of the Qwiic PT100 are open. (They are open by default. Please clear them if you have been using the PT100 for 3-wire or 2-wire sensing.)
 
 Connect the two wires from the geophone to terminals 2 and 3 on the Qwiic PT100. (The polarity does not matter, connect either wire to either terminal.)
 
-## Connect the Qwiic PT100 to the OpenLog Artemis
+**Note:** the Qwiic PT100 has a low pass filter on the input to channels A0 and A1. This helps to reject noise on the PT100 temperature measurements.
+For geophone measurements, it may be beneficial to remove the filter. Refer to the [schematic](https://cdn.sparkfun.com/assets/9/b/6/d/8/Qwiic_PT100-Schematic.pdf).
+Replace R6 and R7 with 0 Ohm resistors. Remove C2, C3 and C5.
 
-Connect the Qwiic PT100 to the OLA using a Qwiic cable.
+## Connect the ADC to the OpenLog Artemis
+
+Connect the ADC to the OLA using a Qwiic cable.
 
 ## Add the microSD card
 
-Your microSD card needs to be formatted as FAT32, which limits its size to 32GB. That's still a lot of data (around 5 months of continuous logging)!
-You can use a card larger than 32GB but formatting it as FAT32 will limit its effective size to 32GB. We hope to be able to support larger exFAT cards in the future.
+CHeck your microSD card is formatted. v2.0 of the geophone logger firmware supports FAT32 and exFAT.
 
 Now insert your microSD card into the socket on the back of the OLA. The card clicks into place.
 
@@ -109,21 +128,22 @@ If you hit any key (send any character) the main menu will open allowing you to 
 The Artemis is doing all of the hard work for you: sampling the geophone signal, converting the samples to frequency data using a Fast Fourier Transform, and logging each reading
 to microSD card.
 
-You can adjust the gain of the ADS122C04 ADC using menu option 4. The gain can be set from x1 to x128. You can also set the amplitude threshold that the peak signal needs to exceed before it
-is logged to SD card. This allows you to avoid logging all of the background noise between seismic waves.
+You can adjust the gain of the ADC using the **Configure Attached Devices** menu option. You can also set the amplitude threshold that the peak signal needs to exceed before it
+is logged to SD card using the **Configure Geophone Threshold** menu option. This allows you to avoid logging all of the background noise between seismic waves.
 
 The SM-24 geophone has a useful frequency range of 240Hz, so we need to be logging at 480Hz or more to be able to capture data across the full frequency range.
 Have a look at [Nyquist-Shannon sampling](https://en.wikipedia.org/wiki/Nyquist%E2%80%93Shannon_sampling_theorem) to find out why. We round the 480Hz up to 500Hz to make life easier for ourselves.
-We actually set the ADS122C04 sample rate to 600Hz to make sure we have a new conversion ready every 2 milliseconds.
+The ADC sample rate is set higher than this, to make sure we have a new conversion ready every 2 milliseconds.
 
 The [Fast Fourier Transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) functions we use to convert the ADC samples into a frequency spectrum like to use data sizes that are powers of two.
-We actually take 1024 samples at 500Hz before we start the FFT conversion and so we get new frequency data every two seconds. The OLA logs "frequency bins" 1 to 501 which corresponds to
+We actually take 1024 samples at 500Hz before we start the FFT conversion and so we get new frequency data every ~two seconds. The OLA logs "frequency bins" 1 to 501 which corresponds to
 0.5Hz to 250.5Hz in 0.5Hz increments.
 
-If you enable Serial Plotter mode using menu option 1 followed by menu option 3, you can use the Arduino IDE Serial Plotter tool to plot the data for you. The left of the window is 0.5Hz,
-the right is 250.5Hz. The vertical bars correspond to intervals of 50Hz. (We're fortunate that the Serial Plotter can plot 500 values at a time!) You will see fresh data scroll in every two
-seconds; the scrolling speed is baud rate dependent (it takes approximately half a second for the fresh data to scroll across at 115200 baud). The Y-axis scales automatically depending on the peak amplitude.
-It is normal to see low amplitude 'noise' displayed when there is no seismic activity.
+If you enable Serial Plotter mode using menu option 1 followed by menu option 3, you can use the Arduino IDE Serial Plotter tool to plot the data for you.
+The left of the window is 0.5Hz, the right is 250.5Hz. The vertical bars correspond to intervals of 50Hz. (We're fortunate that the Serial Plotter can plot
+500 values at a time!) You will see fresh data scroll in every two seconds; the scrolling speed is baud rate dependent (it takes approximately half a second
+for the fresh data to scroll across at 115200 baud). The Y-axis scales automatically depending on the peak amplitude. It is normal to see low amplitude 'noise'
+displayed when there is no seismic activity.
 
 If you look at the data in the files created on the microSD card, you'll see that there are 501 columns of data after the date and time. The 501st column contains the peak frequency signal in Hz.
 
@@ -135,7 +155,7 @@ With no seismic activity, you will see a noisy low level signal. Tap your workbe
 
 You can choose to log the date and time from the Artemis' Real Time Clock (RTC). (Why wouldn't you!?). You can also log a count which increments with each sample.
 
-Please let us know what you've been up to and if you have enjoyed this project. You can contact us via the [SparkFun Artemis Feedback Forum](https://forum.sparkfun.com/viewforum.php?f=171&sid=40b4120c612da34b56c3892e7ac23c67).
+Please let us know what you've been up to and if you have enjoyed this project. You can contact us via the [SparkFun Artemis Feedback Forum](https://forum.sparkfun.com/viewforum.php?f=171).
 
 Enjoy!
 

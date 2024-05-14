@@ -102,7 +102,7 @@ void menuLogRate()
         settings.serialTerminalBaudRate = newBaud;
         recordSystemSettings(); //Normally recorded upon all menu exits
         recordDeviceSettingsToFile(); //Normally recorded upon all menu exits
-        Serial.printf("Terminal now set at %dbps. Please reset device and open terminal at new baud rate. Freezing...\n", settings.serialTerminalBaudRate);
+        Serial.printf("Terminal now set at %dbps. Please reset device and open terminal at new baud rate. Freezing...\r\n", settings.serialTerminalBaudRate);
         while (1);
       }
     }

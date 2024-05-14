@@ -1,58 +1,5 @@
 //Gets the current time from GPS
 //Adjust the hour by local hour offset
-//Adjust the hour by DST as necessary
-//Adjust the date as necessary
-//Returns a string according to user's settings
-//Leap year is taken into account but does not interact with DST (DST happens later in March)
-//
-//Note: this function should only be called if we know that a u-blox GNSS is actually connected
-//
-String getGPSDateTimeAsStr() {
-  //Get latested date/time from GPS
-//  int year = gpsSensor_ublox.getYear();
-//  int month = gpsSensor_ublox.getMonth();
-//  int day = gpsSensor_ublox.getDay();
-//  int hour = gpsSensor_ublox.getHour();
-//  int minute = gpsSensor_ublox.getMinute();
-//  int second = gpsSensor_ublox.getSecond();
-
-  int year = 19;
-  int month = 1;
-  int day = 1;
-  int hour = 6;
-  int minute = 14;
-  int second = 37;
-
-  adjustToLocalDateTime(year, month, day, hour, settings.localUTCOffset);
-
-  if (settings.hour24Style == false)
-  {
-    if (hour > 12) hour -= 12;
-  }
-
-  String myTime = "";
-
-  if (settings.logDate == true)
-  {
-    char gpsDate[11]; //10/12/2019
-    if (settings.americanDateStyle == true)
-      sprintf(gpsDate, "%02d/%02d/20%02d", month, day, year);
-    else
-      sprintf(gpsDate, "%02d/%02d/20%02d", day, month, year);
-    myTime += String(gpsDate);
-    myTime += ",";
-  }
-
-  char gpsTime[13]; //09:14:37.412
-  sprintf(gpsTime, "%02d:%02d:%02d.%03d", hour, minute, second, millis() % 1000); //TODO get GPS hundredths()
-  myTime += String(gpsTime);
-  myTime += ",";
-
-  return (myTime);
-}
-
-//Gets the current time from GPS
-//Adjust the hour by local hour offset
 //Adjust the date as necessary
 //
 //Note: this function should only be called if we know that a u-blox GNSS is actually connected
@@ -64,7 +11,7 @@ void getGPSDateTime(int &year, int &month, int &day, int &hour, int &minute, int
   //Do it twice - to make sure the data is fresh
   getUbloxDateTime(year, month, day, hour, minute, second, millisecond, dateValid, timeValid);
 
-  adjustToLocalDateTime(year, month, day, hour, settings.localUTCOffset);
+  adjustToLocalDateTime(year, month, day, hour, minute, settings.localUTCOffset);
 }
 
 //Given the date and hour, calculate local date/time
@@ -72,10 +19,24 @@ void getGPSDateTime(int &year, int &month, int &day, int &hour, int &minute, int
 //Adjust the hour by DST as necessary
 //Adjust the date as necessary
 //Leap year is taken into account but does not interact with DST (DST happens later in March)
-void adjustToLocalDateTime(int &year, int &month, int &day, int &hour, int localUTCOffset) {
+void adjustToLocalDateTime(int &year, int &month, int &day, int &hour, int &minute, float localUTCOffset) {
 
   //Apply any offset to UTC
-  hour += localUTCOffset;
+  hour += (int)localUTCOffset;
+
+  //Apply minutes offset
+  int tzMins = (int)((localUTCOffset - (float)((int)localUTCOffset)) * 60.0);
+  minute += tzMins;
+  if (minute >= 60)
+  {
+    hour += 1;
+    minute -= 60;
+  }
+  else if (minute < 0)
+  {
+    hour -= 1;
+    minute += 60;
+  }
 
   //If the adjusted hour is outside 0 to 23, then adjust date as necessary
   correctDate(year, month, day, hour);
